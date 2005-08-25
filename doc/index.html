@@ -1,0 +1,59 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:html="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>simple pam module based on libp11 - Trac</title><style type="text/css">
+           @import url(trac.css);
+          </style></head><body><div class="wikipage">
+    <div id="searchable"><h1>Welcome to pam_p11</h1>
+<p>
+Pam_p11 is a plugable authentication module (pam) package for using
+crpytographic tokes such as smart cards and usb crypto tokens for
+authentication.
+</p>
+<p>
+Pam_p11 uses <a class="ext-link" title="http://www.opensc.org/libp11/" href="http://www.opensc.org/libp11/" shape="rect">libp11</a> to access any
+PKCS#11 module. It should be compatible with any implementation,
+but it is primarely developed using <a class="ext-link" title="http://www.opensc.org/opensc/" href="http://www.opensc.org/opensc/" shape="rect">OpenSC</a>.
+</p>
+<p>
+Pam_p11 implements two authentication modules:
+</p>
+<ul><li>pam_p11_openssh authenticates the user using his openssh
+<tt>~/.ssh/authorized_keys</tt> file.
+</li><li>pam_p11_opensc authenticates the user using certificates found in
+<tt>~/.eid/authorized_certificates</tt>. It is compatible with the
+older opensc "pam_opensc" authentication module (eid mode).
+</li></ul><p>
+Pam_p11 is very simple, it has no config file, no options other than the
+PKCS#11 module file, does not know about certificate chains,
+certificate authorities, revocation lists or OCSP.
+Perfect for the small installation with no frills.
+</p>
+<h2>License</h2>
+<p>
+Libp11 is Open Source software licensed under the <a class="ext-link" title="http://www.gnu.org/licenses/licenses.html#LGPL" href="http://www.gnu.org/licenses/licenses.html#LGPL" shape="rect">GNU LGPL license version 2.1 or later</a>.
+</p>
+<p>
+Pam_p11 uses pam, openssl, libp11 and OpenSC
+(or any other implementation of pkcs11).
+</p>
+<blockquote>
+<p>
+Thanks to all those projects, without it would not be possible.
+</p>
+</blockquote>
+<h2>Authors</h2>
+<p>
+Pam_p11 was written by Andreas Jellinghaus, but the code was mostly assembled
+from several sources. Credit goes to (in alphabetical order)
+</p>
+<p>
+Andreas Jellinghaus, Antti Tapaninen, Juan Antonio Martinez, Juha Yrjölä,
+Kevin Stefanik, Ludovic Rousseau, Mario Strasser, Markus Friedl, Olaf Kirch,
+Tatu Ylonen, Timo Sirainen.
+</p>
+<h2>Starting Points</h2>
+<ul><li><a href="OperatingSystems.html" shape="rect">OperatingSystems</a> -- Pam_p11 should work with any PAM implementation.
+</li><li><a href="QuickStart.html" shape="rect">QuickStart</a> -- How to install pam_p11 and how to use it in your applications.
+</li><li><a href="MailingLists.html" shape="rect">MailingLists</a> -- How to contact us.
+</li><li><a href="ResourcesLinks.html" shape="rect">ResourcesLinks</a> -- Standards, Documents, etc.
+</li></ul></div>
+   </div><div class="footer"><hr></hr><p><a href="index.html">Back to Index</a></p></div></body></html>
