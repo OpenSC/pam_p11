@@ -4,10 +4,10 @@ AM_LDFLAGS = @OPENSSL_LIBS@ @LIBP11_LIBS@ -module -avoid-version
 lib_LTLIBRARIES = pam_p11_openssh.la  pam_p11_opensc.la 
 
 pam_p11_openssh_la_SOURCES =  pam_p11.c base64.c match_openssh.c
-pam_p11_openssh_la_LIBADD = @LIBSP11@ 
+pam_p11_openssh_la_LIBADD = @LIBP11_LIBS@ 
 
 pam_p11_opensc_la_SOURCES =  pam_p11.c match_opensc.c
-pam_p11_opensc_la_LIBADD = @LIBSP11@ 
+pam_p11_opensc_la_LIBADD = @LIBP11_LIBS@ 
 
 noinst_PROGRAMS= test
 
