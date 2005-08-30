@@ -1,6 +1,6 @@
 SUBDIRS = . aclocal src
 
-EXTRA_DIST = COPYING INSTALL bootstrap
+EXTRA_DIST = COPYING bootstrap
 
 AUTOMAKE_OPTIONS = foreign
 
