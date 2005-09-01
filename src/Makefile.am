@@ -1,3 +1,7 @@
+# Process this file with automake to create Makefile.in
+
+MAINTAINERCLEANFILES = Makefile.in
+
 AM_CFLAGS = -Wall -fno-strict-aliasing @OPENSSL_CFLAGS@ @LIBP11_CFLAGS@
 AM_LDFLAGS = @OPENSSL_LIBS@ @LIBP11_LIBS@ -module -avoid-version
 
