@@ -43,6 +43,7 @@ PKG_CHECK_MODULES(LIBP11, libp11, [], [ AC_MSG_ERROR(libp11 not found) ])
 AC_CONFIG_FILES([ 
 Makefile
 aclocal/Makefile
+doc/Makefile
 src/Makefile
 ])
 AC_OUTPUT
