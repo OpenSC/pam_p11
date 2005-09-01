@@ -74,9 +74,9 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	struct pam_message *(msgp[1]);
 
 	PKCS11_CTX *ctx;
-	PKCS11_SLOT *slot;
+	PKCS11_SLOT *slot, *slots;
 	PKCS11_CERT *certs;
-	unsigned int ncerts;
+	unsigned int nslots, ncerts;
 	PKCS11_KEY *authkey;
 	PKCS11_CERT *authcert;
 
@@ -89,6 +89,13 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	/* open log */
 	openlog(LOGNAME, LOG_CONS | LOG_PID, LOG_AUTHPRIV);
+
+	/* check parameters */
+	if (argc != 2) {
+		syslog(LOG_ERR, "%s failed: need pkcs11 module as argument",
+				argv[0]);
+		return PAM_ABORT;
+	}
 
 	/* init openssl */
 	OpenSSL_add_all_algorithms();
@@ -106,14 +113,20 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	/* load pkcs #11 module */
 	rv = PKCS11_CTX_load(ctx, argv[0]);
-
 	if (rv) {
 		syslog(LOG_ERR, "loading pkcs11 engine failed");
 		return PAM_AUTHINFO_UNAVAIL;
 	}
 
-	/* get first slot with a token */
-	slot = PKCS11_find_token(ctx);
+	/* get all slots */ 
+	rv = PKCS11_enumerate_slots(ctx, &slots, &nslots);
+	if (rv) {
+		syslog(LOG_ERR, "listing slots failed");
+		return PAM_AUTHINFO_UNAVAIL;
+	}
+
+	/* search for the first slot with a token */
+	slot = PKCS11_find_token(ctx, slots, nslots);
 	if (!slot || !slot->token) {
 		syslog(LOG_ERR, "no token available");
 		rv = PAM_AUTHINFO_UNAVAIL;
@@ -283,6 +296,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	rv = PAM_SUCCESS;
 
       out:
+	PKCS11_release_all_slots(ctx, slots, nslots);
 	PKCS11_CTX_unload(ctx);
 	PKCS11_CTX_free(ctx);
 	return rv;
