@@ -10,5 +10,7 @@ MAINTAINERCLEANFILES = \
 	compile depcomp config.log config.status \
 	config.guess config.sub acinclude.m4 aclocal.m4
 
-dist-hook:
+dist: doc
+
+doc:
 	sh $(srcdir)/doc/export-wiki.sh $(srcdir)/doc
