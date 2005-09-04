@@ -1,8 +1,9 @@
-SUBDIRS = . aclocal doc src
+# Process this file with automake to create Makefile.in
+
+SUBDIRS = . aclocal src
+DIST_SUBDIRS = . aclocal doc src
 
 EXTRA_DIST = COPYING bootstrap
-
-AUTOMAKE_OPTIONS = foreign
 
 MAINTAINERCLEANFILES = \
 	Makefile.in config.h.in configure \
@@ -10,7 +11,6 @@ MAINTAINERCLEANFILES = \
 	compile depcomp config.log config.status \
 	config.guess config.sub acinclude.m4 aclocal.m4
 
-dist: gendoc
+DEPCLEANFILES = config.log configure
 
-gendoc:
-	sh $(srcdir)/doc/export-wiki.sh $(srcdir)/doc
+AUTOMAKE_OPTIONS = foreign 1.5
