@@ -91,9 +91,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	openlog(LOGNAME, LOG_CONS | LOG_PID, LOG_AUTHPRIV);
 
 	/* check parameters */
-	if (argc != 2) {
-		syslog(LOG_ERR, "%s failed: need pkcs11 module as argument",
-				argv[0]);
+	if (argc != 1) {
+		syslog(LOG_ERR, "need pkcs11 module as argument");
 		return PAM_ABORT;
 	}
 
