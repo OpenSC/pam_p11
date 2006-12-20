@@ -213,14 +213,6 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		free(&resp[0]);
 	}
 
-	/* save password if variable nitem is set */
-	rv = pam_set_item(pamh, PAM_AUTHTOK, &password);
-	if (rv != PAM_SUCCESS) {
-		syslog(LOG_ERR, "pam_set_item failed");
-		rv = PAM_AUTHINFO_UNAVAIL;
-		goto out;
-	}
-
 	/* perform pkcs #11 login */
 	rv = PKCS11_login(slot, 0, password);
 	memset(password, 0, strlen(password));
