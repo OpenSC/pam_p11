@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+extern int sc_base64_decode(const char *in, unsigned char *out, size_t outlen);
+
 static const unsigned char base64_table[66] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" "0123456789+/=";
 
@@ -91,6 +93,7 @@ static int from_base64(const char *in, unsigned int *out, int *skip)
 	return c * 6 / 8;
 }
 
+#if 0
 int sc_base64_encode(const unsigned char *in, size_t len, unsigned char *out,
 		     size_t outlen, size_t linelength)
 {
@@ -143,6 +146,7 @@ int sc_base64_encode(const unsigned char *in, size_t len, unsigned char *out,
 
 	return 0;
 }
+#endif
 
 int sc_base64_decode(const char *in, unsigned char *out, size_t outlen)
 {
