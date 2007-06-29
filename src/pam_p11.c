@@ -82,7 +82,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	EVP_PKEY *pubkey;
 
-	unsigned char random[RANDOM_SIZE];
+	unsigned char rand_bytes[RANDOM_SIZE];
 	unsigned char signature[MAX_SIGSIZE];
 	int fd;
 	unsigned siglen;
@@ -232,7 +232,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		goto out;
 	}
 
-	rv = read(fd, random, RANDOM_SIZE);
+	rv = read(fd, rand_bytes, RANDOM_SIZE);
 	if (rv < 0) {
 		syslog(LOG_ERR, "fatal: read from random source failed: ");
 		close(fd);
@@ -259,7 +259,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	/* ask for a sha1 hash of the random data, signed by the key */
 	siglen = MAX_SIGSIZE;
-	rv = PKCS11_sign(NID_sha1, random, RANDOM_SIZE, signature, &siglen,
+	rv = PKCS11_sign(NID_sha1, rand_bytes, RANDOM_SIZE, signature, &siglen,
 			 authkey);
 	if (rv != 1) {
 		syslog(LOG_ERR, "fatal: pkcs11_sign failed\n");
@@ -276,7 +276,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	/* now verify the result */
-	rv = RSA_verify(NID_sha1, random, RANDOM_SIZE,
+	rv = RSA_verify(NID_sha1, rand_bytes, RANDOM_SIZE,
 			signature, siglen, pubkey->pkey.rsa);
 	if (rv != 1) {
 		syslog(LOG_ERR, "fatal: RSA_verify failed\n");
