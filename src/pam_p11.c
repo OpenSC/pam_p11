@@ -47,7 +47,7 @@ extern int match_user(X509 * x509, const char *login);
 /*
 * comodity function that returns 1 on null, empty o spaced string
 */
-int is_spaced_str(const char *str)
+static int is_spaced_str(const char *str)
 {
 	char *pt = (char *)str;
 	if (!str)
