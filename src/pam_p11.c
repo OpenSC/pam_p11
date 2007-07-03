@@ -117,7 +117,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		return PAM_AUTHINFO_UNAVAIL;
 	}
 
-	/* get all slots */ 
+	/* get all slots */
 	rv = PKCS11_enumerate_slots(ctx, &slots, &nslots);
 	if (rv) {
 		syslog(LOG_ERR, "listing slots failed");
@@ -139,7 +139,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
-	if (ncerts <=0) {
+	if (ncerts <= 0) {
 		syslog(LOG_ERR, "no certificates found");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;

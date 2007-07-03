@@ -11,7 +11,7 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
-static void add_cert(X509 *cert, X509 ***certs, int *ncerts)
+static void add_cert(X509 * cert, X509 *** certs, int *ncerts)
 {
 	X509 **certs2;
 	/* sanity checks */
@@ -66,31 +66,33 @@ extern int match_user(X509 * x509, const char *login)
 	if (!pw || !pw->pw_dir)
 		return -1;
 
-	snprintf(filename, PATH_MAX, "%s/.eid/authorized_certificates", pw->pw_dir);
+	snprintf(filename, PATH_MAX, "%s/.eid/authorized_certificates",
+		 pw->pw_dir);
 
 	in = BIO_new(BIO_s_file());
 	if (!in)
 		return -1;
 
-        rc = BIO_read_filename(in, filename);
-        if (rc != 1) {
-                syslog(LOG_ERR,"BIO_read_filename from %s failed\n",filename);
-                return -1;
-        }
+	rc = BIO_read_filename(in, filename);
+	if (rc != 1) {
+		syslog(LOG_ERR, "BIO_read_filename from %s failed\n", filename);
+		return -1;
+	}
 
-	ncerts=0; certs=NULL;
+	ncerts = 0;
+	certs = NULL;
 	for (;;) {
 		X509 *cert = PEM_read_bio_X509(in, NULL, 0, NULL);
 		if (cert)
 			add_cert(cert, &certs, &ncerts);
-		else 
+		else
 			break;
 	}
 
-        BIO_free(in);
+	BIO_free(in);
 
 	for (i = 0; i < ncerts; i++) {
-		if (X509_cmp(certs[i],x509) == 0)
+		if (X509_cmp(certs[i], x509) == 0)
 			return 1;	/* FOUND */
 	}
 	return 0;
