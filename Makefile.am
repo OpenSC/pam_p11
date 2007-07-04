@@ -3,7 +3,7 @@
 SUBDIRS = . aclocal src
 DIST_SUBDIRS = . aclocal doc src
 
-EXTRA_DIST = COPYING bootstrap
+EXTRA_DIST = COPYING NEWS bootstrap
 
 MAINTAINERCLEANFILES = \
 	Makefile.in config.h.in configure \

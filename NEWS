@@ -1,6 +1,6 @@
 NEWS for Pam_p11 -- History of user visible changes
 
-New in 0.1.2; 2007-07-03 Andreas Jellinghaus
+New in 0.1.2; 2007-07-07 Andreas Jellinghaus
 * make some functions static.
 * rename variables to avoid names of glibc functions (e.g. random)
 * do not save the password (i.e. pin - shouldn't go anywhere except
