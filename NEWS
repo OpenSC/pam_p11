@@ -1,8 +1,8 @@
 NEWS for Pam_p11 -- History of user visible changes
 
-New in 0.1.2; 2007-07-07 Andreas Jellinghaus
+New in 0.1.2; 2007-07-10; Andreas Jellinghaus
+* update wiki export script (add images, fix links).
 * make some functions static.
-* rename variables to avoid names of glibc functions (e.g. random)
+* rename variables to avoid names of glibc functions (e.g. random).
 * do not save the password (i.e. pin - shouldn't go anywhere except
-  to the card)
-
+  to the card).
