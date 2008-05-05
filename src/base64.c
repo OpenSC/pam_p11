@@ -47,6 +47,7 @@ static const unsigned char bin_table[128] = {
 	0x31, 0x32, 0x33, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 };
 
+#if 0
 static void to_base64(unsigned int i, unsigned char *out, unsigned int fillers)
 {
 	unsigned int s = 18, c;
@@ -60,6 +61,7 @@ static void to_base64(unsigned int i, unsigned char *out, unsigned int fillers)
 		s -= 6;
 	}
 }
+#endif
 
 static int from_base64(const char *in, unsigned int *out, int *skip)
 {
