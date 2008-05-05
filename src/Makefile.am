@@ -16,7 +16,7 @@ pam_p11_opensc_la_LIBADD = $(OPENSSL_LIBS) $(LIBP11_LIBS)
 noinst_PROGRAMS= test
 
 test_SOURCES=test.c
-test_LDADD=./.libs/pam_p11_openssh.so
+test_LDADD=pam_p11_openssh.la
 
 format:
 	indent -kr -i8 -ts8 -sob -l80 -ss -ncs *.c *.h
