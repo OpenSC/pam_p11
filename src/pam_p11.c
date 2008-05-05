@@ -49,22 +49,6 @@
 
 extern int match_user(X509 * x509, const char *login);
 
-/*
-* comodity function that returns 1 on null, empty o spaced string
-*/
-static int is_spaced_str(const char *str)
-{
-	char *pt = (char *)str;
-	if (!str)
-		return 1;
-	if (!strcmp(str, ""))
-		return 1;
-	for (; *pt; pt++)
-		if (!isspace(*pt))
-			return 0;
-	return 1;
-}
-
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 				   const char **argv)
 {
