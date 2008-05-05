@@ -20,7 +20,7 @@ AC_PROG_LN_S
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([string.h syslog.h fcntl.h unistd.h])
+AC_CHECK_HEADERS([string.h syslog.h fcntl.h unistd.h security/pam_ext.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
