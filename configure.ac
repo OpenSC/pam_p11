@@ -4,7 +4,7 @@
 AC_PREREQ(2.52)
 
 # Process this file with autoconf to produce a configure script.
-AC_INIT(pam_p11,[0.1.3-svn])
+AC_INIT(pam_p11,[0.1.4-svn])
 AC_CONFIG_SRCDIR([src/pam_p11.c])
 AC_CANONICAL_TARGET([])
 AM_INIT_AUTOMAKE

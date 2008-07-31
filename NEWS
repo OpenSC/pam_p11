@@ -1,5 +1,8 @@
 NEWS for Pam_p11 -- History of user visible changes
 
+New in 0.1.4; 2008-07-31; Andreas Jellinghaus
+* new version with a number of build fixes
+
 New in 0.1.3; 2007-07-11; Andreas Jellinghaus
 * update wiki export script (add images, fix links).
 * make some functions static.
