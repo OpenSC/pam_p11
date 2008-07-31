@@ -29,7 +29,7 @@ sed -e "s#</li>#</li>\n#g" < "$SRCDIR"/TitleIndex.tmp \
 	| grep "\"/$WIKI/[^\"]*\"" \
         |sed -e "s#.*\"/$WIKI/\([^\"]*\)\".*#\1#g" \
 	> "$SRCDIR"/WikiWords.tmp
-$SED -e /^Trac/d -e /^Wiki/d -e /^TitleIndex/d -e /^RecentChanges/d \
+sed -e /^Trac/d -e /^Wiki/d -e /^TitleIndex/d -e /^RecentChanges/d \
         -e /^CamelCase/d -e /^SandBox/d -e /^InterMapTxt/d -e /^InterWiki/d \
         -e /^InterTrac/d -i "$SRCDIR"/WikiWords.tmp
 
