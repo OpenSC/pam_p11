@@ -1,5 +1,8 @@
 NEWS for Pam_p11 -- History of user visible changes
 
+New in 0.1.5; 2008-08-27; Andreas Jellinghaus
+* fix script for wiki to html export.
+
 New in 0.1.4; 2008-07-31; Andreas Jellinghaus
 * new version with a number of build fixes
 
