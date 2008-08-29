@@ -52,7 +52,7 @@ extern int match_user(X509 * x509, const char *login);
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 				   const char **argv)
 {
-	int i, rv;
+	int rv;
 	const char *user;
 	char *password;
 	char password_prompt[64];
@@ -75,6 +75,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	unsigned char signature[MAX_SIGSIZE];
 	int fd;
 	unsigned siglen;
+	unsigned int i;
 
 	/* check parameters */
 	if (argc != 1) {

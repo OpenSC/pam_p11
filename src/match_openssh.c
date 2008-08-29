@@ -151,7 +151,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	i += 4;
 
 	/* now: key_from_blob */
-	if (strncmp(&decoded[i], "ssh-rsa", 7) != 0)
+	if (strncmp((char *)&decoded[i], "ssh-rsa", 7) != 0)
 		return NULL;
 
 	i += len;
