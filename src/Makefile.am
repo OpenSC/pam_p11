@@ -4,20 +4,10 @@ EXTRA_DIST = test.c
 
 AM_CFLAGS = $(OPENSSL_CFLAGS) $(LIBP11_CFLAGS) $(PAM_CFLAGS)
 LIBS = $(OPENSSL_LIBS) $(LIBP11_LIBS) $(PAM_LIBS)
-AM_LDFLAGS = -module -avoid-version -shared -no-undefined \
+AM_LDFLAGS = -module -shared -avoid-version -shared -no-undefined \
 	-export-symbols "$(srcdir)/pam_p11.exports"
 
 pam_LTLIBRARIES = pam_p11_openssh.la  pam_p11_opensc.la 
-
-# Needed until libtool-2
-install-data-hook:	install-pamLTLIBRARIES
-	rm -f "$(DESTDIR)$(pamdir)/pam_p11_openssh.la"
-	rm -f "$(DESTDIR)$(pamdir)/pam_p11_openssh.a"
-	rm -f "$(DESTDIR)$(pamdir)/pam_p11_opensc.la"
-	rm -f "$(DESTDIR)$(pamdir)/pam_p11_opensc.a"
-uninstall-local:
-	rm -f "$(DESTDIR)$(pamdir)/pam_p11_openssh.so"
-	rm -f "$(DESTDIR)$(pamdir)/pam_p11_opensc.so"
 
 pam_p11_openssh_la_SOURCES =  pam_p11.c base64.c match_openssh.c \
 	pam_p11.exports
