@@ -167,9 +167,13 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	rv = pam_get_item(pamh, PAM_AUTHTOK, (void *)&password);
 	if (rv == PAM_SUCCESS && password) {
 		password = strdup(password);
+	} else 
+        if (slot->token->secureLogin) {
+		pam_syslog(pamh, LOG_INFO, "PIN to be entered on the reader.");
+		password = NULL;
 	} else {
 		/* get password */
-		sprintf(password_prompt, "Password for token %.32s: ",
+		sprintf(password_prompt, "Password for token %.32s ",
 			slot->token->label);
 
 		/* ask the user for the password if variable text is set */
@@ -202,8 +206,10 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	/* perform pkcs #11 login */
 	rv = PKCS11_login(slot, 0, password);
-	memset(password, 0, strlen(password));
-	free(password);
+	if (password) {
+		memset(password, 0, strlen(password));
+		free(password);
+	};
 	if (rv != 0) {
 		pam_syslog(pamh, LOG_ERR, "PKCS11_login failed");
 		rv = PAM_AUTHINFO_UNAVAIL;
