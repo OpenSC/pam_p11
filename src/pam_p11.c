@@ -173,7 +173,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		password = NULL;
 	} else {
 		/* get password */
-		sprintf(password_prompt, "Password for token %.32s ",
+		sprintf(password_prompt, "Password for token %.32s: ",
 			slot->token->label);
 
 		/* ask the user for the password if variable text is set */
