@@ -1,6 +1,6 @@
 NEWS for Pam_p11 -- History of user visible changes
 
-New in 0.1.6; ????-??-??; Andreas Jellinghaus
+New in 0.1.6; 2017-03-06 Alon Bar-Lev
 * Build system rewritten (NOTICE: configure options was modified). 
 
 New in 0.1.5; 2008-08-27; Andreas Jellinghaus
