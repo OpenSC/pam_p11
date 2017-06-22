@@ -210,6 +210,44 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		goto out;
 	}
 
+	/* login destroyed the certificates, get all certs */
+	rv = PKCS11_enumerate_certs(slot->token, &certs, &ncerts);
+	if (rv) {
+		pam_syslog(pamh, LOG_ERR, "PKCS11_enumerate_certs failed");
+		rv = PAM_AUTHINFO_UNAVAIL;
+		goto out;
+	}
+	if (ncerts <= 0) {
+		pam_syslog(pamh, LOG_ERR, "no certificates found");
+		rv = PAM_AUTHINFO_UNAVAIL;
+		goto out;
+	}
+
+	/* find a valid and matching certificates */
+	for (i = 0; i < ncerts; i++) {
+		authcert = &certs[i];
+		if (authcert != NULL) {
+			/* check whether the certificate matches the user */
+			rv = match_user(authcert->x509, user);
+			if (rv < 0) {
+				pam_syslog(pamh, LOG_ERR, "match_user() failed");
+				rv = PAM_AUTHINFO_UNAVAIL;
+				goto out;
+			} else if (rv == 0) {
+				/* this is not the cert we are looking for */
+				authcert = NULL;
+			} else {
+				break;
+			}
+		}
+	}
+
+	if (!authcert) {
+		pam_syslog(pamh, LOG_ERR, "not matching certificate found");
+		rv = PAM_AUTHINFO_UNAVAIL;
+		goto out;
+	}
+
       loggedin:
 	/* get random bytes */
 	fd = open(RANDOM_SOURCE, O_RDONLY);
