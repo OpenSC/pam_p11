@@ -17,11 +17,52 @@
 
 #define OPENSSH_LINE_MAX 8192	/* from openssh SSH_MAX_PUBKEY_BYTES */
 
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined (LIBRESSL_VERSION_NUMBER)
+void RSA_get0_key(const RSA *r,
+                 const BIGNUM **n, const BIGNUM **e, const BIGNUM **d)
+{
+	if (n != NULL)
+		*n = r->n;
+	if (e != NULL)
+		*e = r->e;
+	if (d != NULL)
+		*d = r->d;
+}
+
+int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d)
+{
+	/* If the fields n and e in r are NULL, the corresponding input
+	* parameters MUST be non-NULL for n and e.  d may be
+	* left NULL (in case only the public key is used).
+	*/
+	if ((r->n == NULL && n == NULL)
+	|| (r->e == NULL && e == NULL))
+		return 0;
+
+	if (n != NULL) {
+		BN_free(r->n);
+		r->n = n;
+	}
+	if (e != NULL) {
+		BN_free(r->e);
+		r->e = e;
+	}
+	if (d != NULL) {
+		BN_free(r->d);
+		r->d = d;
+	}
+
+	return 1;
+}
+
+#endif
+
 static EVP_PKEY *ssh1_line_to_key(char *line)
 {
 	EVP_PKEY *key;
 	RSA *rsa;
 	char *b, *e, *m, *c;
+	BIGNUM *rsa_e, *rsa_n;
 
 	key = EVP_PKEY_new();
 	if (!key)
@@ -96,14 +137,16 @@ static EVP_PKEY *ssh1_line_to_key(char *line)
 	/* ok, now we have b e m pointing to pure digit
 	 * null terminated strings and maybe c pointing to a comment */
 
-	BN_dec2bn(&rsa->e, e);
-	BN_dec2bn(&rsa->n, m);
+	BN_dec2bn(&rsa_e, e);
+	BN_dec2bn(&rsa_n, m);
+	if (!RSA_set0_key(rsa, rsa_n, rsa_e, NULL))
+		goto err;
 
 	EVP_PKEY_assign_RSA(key, rsa);
 	return key;
 
       err:
-	free(key);
+	EVP_PKEY_free(key);
 	return NULL;
 }
 
@@ -113,6 +156,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 {
 	EVP_PKEY *key;
 	RSA *rsa;
+	BIGNUM *rsa_e, *rsa_n;
 	unsigned char decoded[OPENSSH_LINE_MAX];
 	int len;
 
@@ -166,7 +210,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	i += 4;
 
 	/* get bignum */
-	rsa->e = BN_bin2bn(decoded + i, len, NULL);
+	rsa_e = BN_bin2bn(decoded + i, len, NULL);
 	i += len;
 
 	/* get integer from blob */
@@ -176,7 +220,14 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	i += 4;
 
 	/* get bignum */
-	rsa->n = BN_bin2bn(decoded + i, len, NULL);
+	rsa_n = BN_bin2bn(decoded + i, len, NULL);
+
+	/* set e and n */
+	if (!RSA_set0_key(rsa, rsa_n, rsa_e, NULL)) {
+		EVP_PKEY_free(key);
+		RSA_free(rsa);
+		return NULL;
+	}
 
 	EVP_PKEY_assign_RSA(key, rsa);
 	return key;
@@ -227,6 +278,7 @@ extern int match_user(X509 * x509, const char *login)
 	FILE *file;
 	EVP_PKEY **keys = NULL;
 	EVP_PKEY *authkey;
+	const BIGNUM *rsa_e, *rsa_n, *auth_e, *auth_n;
 	int nkeys = 0, i;
 
 	authkey = X509_get_pubkey(x509);
@@ -282,9 +334,12 @@ extern int match_user(X509 * x509, const char *login)
 		if (!rsa)
 			continue;	/* not RSA */
 
-		if (BN_cmp(rsa->e, authrsa->e) != 0)
+		RSA_get0_key(rsa, &rsa_n, &rsa_e, NULL);
+		RSA_get0_key(authrsa, &auth_n, &auth_e, NULL);
+
+		if (BN_cmp(rsa_e, auth_e) != 0)
 			continue;
-		if (BN_cmp(rsa->n, authrsa->n) != 0)
+		if (BN_cmp(rsa_n, auth_n) != 0)
 			continue;
 		return 1;	/* FOUND */
 	}
