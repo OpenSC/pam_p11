@@ -47,6 +47,15 @@
 #define RANDOM_SIZE 128
 #define MAX_SIGSIZE 256
 
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined (LIBRESSL_VERSION_NUMBER)
+RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey) {
+	if (pkey->type != EVP_PKEY_RSA) {
+		return NULL;
+	}
+	return pkey->pkey.rsa;
+}
+#endif
+
 extern int match_user(X509 * x509, const char *login);
 
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
@@ -70,6 +79,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_CERT *authcert;
 
 	EVP_PKEY *pubkey;
+	RSA *rsa;
 
 	unsigned char rand_bytes[RANDOM_SIZE];
 	unsigned char signature[MAX_SIGSIZE];
@@ -263,8 +273,14 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	/* now verify the result */
+	rsa = EVP_PKEY_get0_RSA(pubkey);
+	if (rsa == NULL) {
+		pam_syslog(pamh, LOG_ERR, "could not extract rsa public key\n");
+		rv = PAM_AUTHINFO_UNAVAIL;
+		goto out;
+	}
 	rv = RSA_verify(NID_sha1, rand_bytes, RANDOM_SIZE,
-			signature, siglen, pubkey->pkey.rsa);
+			signature, siglen, rsa);
 	if (rv != 1) {
 		pam_syslog(pamh, LOG_ERR, "fatal: RSA_verify failed\n");
 		rv = PAM_AUTHINFO_UNAVAIL;
