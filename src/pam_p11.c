@@ -58,16 +58,42 @@ RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey) {
 
 extern int match_user(X509 * x509, const char *login);
 
+static int pam_prompt(pam_handle_t *pamh, int style, char **response, const char *text)
+{
+	int rv;
+	const struct pam_conv *conv;
+	struct pam_message msg;
+	struct pam_response *resp;
+	struct pam_message *(msgp[1]);
+	msgp[0] = &msg;
+
+	msg.msg_style = style;
+	msg.msg = text;
+	rv = pam_get_item(pamh, PAM_CONV, (const void **) &conv);
+	if (rv != PAM_SUCCESS)
+		return rv;
+	if ((conv == NULL) || (conv->conv == NULL))
+		return PAM_CRED_INSUFFICIENT;
+	rv = conv->conv(1, (const struct pam_message **) msgp, &resp, conv->appdata_ptr);
+	if (rv != PAM_SUCCESS)
+		return rv;
+	if ((resp == NULL) || (resp[0].resp == NULL))
+		return !response ? PAM_SUCCESS : PAM_CRED_INSUFFICIENT;
+	if (response) {
+		*response = strdup(resp[0].resp);
+	}
+	/* overwrite memory and release it */
+	memset(resp[0].resp, 0, strlen(resp[0].resp));
+	free(&resp[0]);
+	return PAM_SUCCESS;
+}
+
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 				   const char **argv)
 {
 	int rv;
 	const char *user;
-	char *password;
-
-	struct pam_conv *conv;
-	struct pam_response *resp;
-	struct pam_message *(msgp[1]);
+	char *password = NULL;
 
 	PKCS11_CTX *ctx;
 	PKCS11_SLOT *slot, *slots;
@@ -107,22 +133,19 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	/* load pkcs #11 module */
 	rv = PKCS11_CTX_load(ctx, argv[0]);
-	if (rv) {
-		pam_syslog(pamh, LOG_ERR, "loading pkcs11 engine failed");
-		return PAM_AUTHINFO_UNAVAIL;
+	if (!rv) {
+		/* get all slots */
+		rv = PKCS11_enumerate_slots(ctx, &slots, &nslots);
 	}
-
-	/* get all slots */
-	rv = PKCS11_enumerate_slots(ctx, &slots, &nslots);
 	if (rv) {
-		pam_syslog(pamh, LOG_ERR, "listing slots failed");
+		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "Error initializing PKCS#11 module");
 		return PAM_AUTHINFO_UNAVAIL;
 	}
 
 	/* search for the first slot with a token */
 	slot = PKCS11_find_token(ctx, slots, nslots);
 	if (!slot || !slot->token) {
-		pam_syslog(pamh, LOG_ERR, "no token available");
+		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "No smart card found");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
@@ -160,7 +183,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (!authcert) {
-		pam_syslog(pamh, LOG_ERR, "not matching certificate found");
+		pam_prompt(pamh, PAM_ERROR_MSG, NULL, "No authorized credential found");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
@@ -175,48 +198,24 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	} else {
 		char text[80];
 		const char *prompt;
-		struct pam_message msg;
-		msgp[0] = &msg;
+		char **response;
+		int msg_style;
 
 		if (slot->token->secureLogin) {
 			prompt = ": Enter PIN on PIN pad";
-			msg.msg_style = PAM_TEXT_INFO;
+			msg_style = PAM_TEXT_INFO;
+			response = NULL;
 		} else {
 			prompt = ": Enter PIN: ";
 			/* ask the user for the password if variable text is set */
-			msg.msg_style = PAM_PROMPT_ECHO_OFF;
+			msg_style = PAM_PROMPT_ECHO_OFF;
+			response = &password;
 		}
 		sprintf(text, "%.*s%s",
 				sizeof text - strlen(prompt), slot->token->label, prompt);
-		msg.msg = text;
-
-		rv = pam_get_item(pamh, PAM_CONV, (const void **)&conv);
+		rv = pam_prompt(pamh, msg_style, response, text);
 		if (rv != PAM_SUCCESS) {
-			rv = PAM_AUTHINFO_UNAVAIL;
 			goto out;
-		}
-		if ((conv == NULL) || (conv->conv == NULL)) {
-			rv = PAM_AUTHINFO_UNAVAIL;
-			goto out;
-		}
-		rv = conv->conv(1, (const struct pam_message **)msgp, &resp,
-				conv->appdata_ptr);
-		if (rv != PAM_SUCCESS) {
-			rv = PAM_AUTHINFO_UNAVAIL;
-			goto out;
-		}
-
-		if (slot->token->secureLogin) {
-			password = NULL;
-		} else {
-			if ((resp == NULL) || (resp[0].resp == NULL)) {
-				rv = PAM_AUTHINFO_UNAVAIL;
-				goto out;
-			}
-			password = strdup(resp[0].resp);
-			/* overwrite memory and release it */
-			memset(resp[0].resp, 0, strlen(resp[0].resp));
-			free(&resp[0]);
 		}
 	}
 
@@ -227,30 +226,30 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		free(password);
 	}
 	if (rv != 0) {
-		pam_syslog(pamh, LOG_ERR, "PKCS11_login failed");
+		pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
 
-      loggedin:
+loggedin:
 	/* get random bytes */
 	fd = open(RANDOM_SOURCE, O_RDONLY);
 	if (fd < 0) {
-		pam_syslog(pamh, LOG_ERR, "fatal: cannot open RANDOM_SOURCE: ");
+		pam_syslog(pamh, LOG_ERR, "fatal: cannot open RANDOM_SOURCE");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
 
 	rv = read(fd, rand_bytes, RANDOM_SIZE);
 	if (rv < 0) {
-		pam_syslog(pamh, LOG_ERR, "fatal: read from random source failed: ");
+		pam_syslog(pamh, LOG_ERR, "fatal: read from random source failed");
 		close(fd);
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
 
 	if (rv < RANDOM_SIZE) {
-		pam_syslog(pamh, LOG_ERR, "fatal: read returned less than %d<%d bytes\n",
+		pam_syslog(pamh, LOG_ERR, "fatal: read returned less than %d<%d bytes",
 		       rv, RANDOM_SIZE);
 		close(fd);
 		rv = PAM_AUTHINFO_UNAVAIL;
@@ -271,7 +270,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	rv = PKCS11_sign(NID_sha1, rand_bytes, RANDOM_SIZE, signature, &siglen,
 			 authkey);
 	if (rv != 1) {
-		pam_syslog(pamh, LOG_ERR, "fatal: pkcs11_sign failed\n");
+		pam_syslog(pamh, LOG_ERR, "fatal: pkcs11_sign failed");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
@@ -287,14 +286,14 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	/* now verify the result */
 	rsa = EVP_PKEY_get0_RSA(pubkey);
 	if (rsa == NULL) {
-		pam_syslog(pamh, LOG_ERR, "could not extract rsa public key\n");
+		pam_syslog(pamh, LOG_ERR, "could not extract rsa public key");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}
 	rv = RSA_verify(NID_sha1, rand_bytes, RANDOM_SIZE,
 			signature, siglen, rsa);
 	if (rv != 1) {
-		pam_syslog(pamh, LOG_ERR, "fatal: RSA_verify failed\n");
+		pam_syslog(pamh, LOG_ERR, "fatal: RSA_verify failed");
 		rv = PAM_AUTHINFO_UNAVAIL;
 		goto out;
 	}

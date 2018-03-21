@@ -43,8 +43,7 @@ int main(int argc, const char **argv)
 			puts("Usage: test [pkcs11_module.so [username]]");
 			goto err;
 	}
-	printf("Authenticating '%s' with '%s'", user, module);
-	fflush(stdout);
+	printf("Authenticating '%s' with '%s'\n", user, module);
 
 	r = pam_start("", user, &conv, &pamh);
 	if (PAM_SUCCESS != r)
@@ -58,9 +57,9 @@ int main(int argc, const char **argv)
 
 pam_err:
 	if (PAM_SUCCESS != r) {
-		printf("\nError: %s\n", pam_strerror(pamh, r));
+		printf("Error: %s\n", pam_strerror(pamh, r));
 	} else {
-		printf(": OK\n");
+		printf("OK\n");
 	}
 	pam_end(pamh, r);
 
