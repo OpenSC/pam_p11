@@ -11,49 +11,11 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
-static void add_cert(X509 * cert, X509 *** certs, int *ncerts)
-{
-	X509 **certs2;
-	/* sanity checks */
-	if (!cert)
-		return;
-
-	if (!certs)
-		return;
-
-	if (!ncerts)
-		return;
-
-	/* no certs so far */
-	if (!*certs) {
-		*certs = malloc(sizeof(void *));
-		if (!*certs)
-			return;
-		*certs[0] = cert;
-		*ncerts = 1;
-		return;
-	}
-
-	/* enlarge */
-
-	certs2 = malloc(sizeof(void *) * ((*ncerts) + 1));
-	if (!certs2)
-		return;
-
-	memcpy(certs2, *certs, sizeof(void *) * (*ncerts));
-	certs2[*ncerts] = cert;
-
-	free(*certs);
-	*certs = certs2;
-	(*ncerts)++;
-}
-
 extern int match_user(X509 * x509, const char *login)
 {
 	char filename[PATH_MAX];
 	struct passwd *pw;
-	X509 **certs;
-	int ncerts, i, rc;
+	int found;
 	BIO *in;
 
 	if (!x509)
@@ -73,27 +35,26 @@ extern int match_user(X509 * x509, const char *login)
 	if (!in)
 		return -1;
 
-	rc = BIO_read_filename(in, filename);
-	if (rc != 1) {
+	if (BIO_read_filename(in, filename) != 1) {
 		syslog(LOG_ERR, "BIO_read_filename from %s failed\n", filename);
 		return -1;
 	}
 
-	ncerts = 0;
-	certs = NULL;
+	found = 0;
 	for (;;) {
 		X509 *cert = PEM_read_bio_X509(in, NULL, 0, NULL);
-		if (cert)
-			add_cert(cert, &certs, &ncerts);
-		else
+		if (!cert) {
 			break;
+		}
+		if (X509_cmp(cert, x509) == 0) {
+			found = 1;
+		}
+		X509_free(cert);
+		if (found) {
+			break;
+		}
 	}
-
 	BIO_free(in);
 
-	for (i = 0; i < ncerts; i++) {
-		if (X509_cmp(certs[i], x509) == 0)
-			return 1;	/* FOUND */
-	}
-	return 0;
+	return found;
 }

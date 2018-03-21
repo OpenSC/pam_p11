@@ -76,7 +76,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_KEY *authkey;
 	PKCS11_CERT *authcert;
 
-	EVP_PKEY *pubkey;
+	EVP_PKEY *pubkey = NULL;
 	RSA *rsa;
 
 	unsigned char rand_bytes[RANDOM_SIZE];
@@ -301,10 +301,13 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 
 	rv = PAM_SUCCESS;
 
-      out:
+out:
 	PKCS11_release_all_slots(ctx, slots, nslots);
 	PKCS11_CTX_unload(ctx);
 	PKCS11_CTX_free(ctx);
+	if (pubkey)
+		EVP_PKEY_free(pubkey);
+
 	return rv;
 }
 
