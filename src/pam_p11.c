@@ -44,7 +44,7 @@
 #define LOGNAME   "pam_p11"	/* name for log-file entries */
 
 #define RANDOM_SOURCE "/dev/urandom"
-#define RANDOM_SIZE 128
+#define RANDOM_SIZE 127
 #define MAX_SIGSIZE 256
 
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined (LIBRESSL_VERSION_NUMBER)
