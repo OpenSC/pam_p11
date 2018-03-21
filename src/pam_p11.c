@@ -64,10 +64,8 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	int rv;
 	const char *user;
 	char *password;
-	char password_prompt[64];
 
 	struct pam_conv *conv;
-	struct pam_message msg;
 	struct pam_response *resp;
 	struct pam_message *(msgp[1]);
 
@@ -170,21 +168,28 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	if (!slot->token->loginRequired)
 		goto loggedin;
 
-	/* get password */
-	msgp[0] = &msg;
-
 	/* try to get stored item */
 	rv = pam_get_item(pamh, PAM_AUTHTOK, (void *)&password);
 	if (rv == PAM_SUCCESS && password) {
 		password = strdup(password);
 	} else {
-		/* get password */
-		sprintf(password_prompt, "Password for token %.32s: ",
-			slot->token->label);
+		char text[80];
+		const char *prompt;
+		struct pam_message msg;
+		msgp[0] = &msg;
 
-		/* ask the user for the password if variable text is set */
-		msg.msg_style = PAM_PROMPT_ECHO_OFF;
-		msg.msg = password_prompt;
+		if (slot->token->secureLogin) {
+			prompt = ": Enter PIN on PIN pad";
+			msg.msg_style = PAM_TEXT_INFO;
+		} else {
+			prompt = ": Enter PIN: ";
+			/* ask the user for the password if variable text is set */
+			msg.msg_style = PAM_PROMPT_ECHO_OFF;
+		}
+		sprintf(text, "%.*s%s",
+				sizeof text - strlen(prompt), slot->token->label, prompt);
+		msg.msg = text;
+
 		rv = pam_get_item(pamh, PAM_CONV, (const void **)&conv);
 		if (rv != PAM_SUCCESS) {
 			rv = PAM_AUTHINFO_UNAVAIL;
@@ -200,20 +205,27 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 			rv = PAM_AUTHINFO_UNAVAIL;
 			goto out;
 		}
-		if ((resp == NULL) || (resp[0].resp == NULL)) {
-			rv = PAM_AUTHINFO_UNAVAIL;
-			goto out;
+
+		if (slot->token->secureLogin) {
+			password = NULL;
+		} else {
+			if ((resp == NULL) || (resp[0].resp == NULL)) {
+				rv = PAM_AUTHINFO_UNAVAIL;
+				goto out;
+			}
+			password = strdup(resp[0].resp);
+			/* overwrite memory and release it */
+			memset(resp[0].resp, 0, strlen(resp[0].resp));
+			free(&resp[0]);
 		}
-		password = strdup(resp[0].resp);
-		/* overwrite memory and release it */
-		memset(resp[0].resp, 0, strlen(resp[0].resp));
-		free(&resp[0]);
 	}
 
 	/* perform pkcs #11 login */
 	rv = PKCS11_login(slot, 0, password);
-	memset(password, 0, strlen(password));
-	free(password);
+	if (password) {
+		memset(password, 0, strlen(password));
+		free(password);
+	}
 	if (rv != 0) {
 		pam_syslog(pamh, LOG_ERR, "PKCS11_login failed");
 		rv = PAM_AUTHINFO_UNAVAIL;
