@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <openssl/crypto.h>
 
 #include <libp11.h>
 
@@ -35,304 +36,312 @@
 #include <security/pam_ext.h>
 #else
 #define pam_syslog(handle, level, msg...) syslog(level, ## msg)
+static int pam_prompt(pam_handle_t *pamh, int style, char **response, char *fmt, ...)
+{
+	int r = PAM_CRED_INSUFFICIENT;
+	const struct pam_conv *conv;
+	struct pam_message msg;
+	struct pam_response *resp = NULL;
+	struct pam_message *(msgp[1]);
+
+	va_list va;
+	char text[128];
+
+	va_start(va, fmt);
+	vsnprintf(text, sizeof text, fmt, va);
+	va_end(va);
+
+	msgp[0] = &msg;
+	msg.msg_style = style;
+	msg.msg = text;
+
+	if (PAM_SUCCESS != pam_get_item(pamh, PAM_CONV, (const void **) &conv)
+		|| NULL == conv || NULL == conv->conv
+		|| conv->conv(1, (const struct pam_message **) msgp, &resp, conv->appdata_ptr)
+		|| NULL == resp) {
+		goto err;
+	}
+	if (NULL != response) {
+		if (resp[0].resp) {
+			*response = strdup(resp[0].resp);
+		} else {
+			*response = NULL;
+		}
+	}
+
+	r = PAM_SUCCESS;
+err:
+	if (resp) {
+		OPENSSL_cleanse(&resp[0].resp, sizeof resp[0].resp);
+		free(&resp[0]);
+	}
+	return r;
+}
 #endif
 
 #ifndef PAM_EXTERN
 #define PAM_EXTERN extern
 #endif
 
-#define LOGNAME   "pam_p11"	/* name for log-file entries */
-
-#define RANDOM_SIZE 127
-#define MAX_SIGSIZE 256
-
-#if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined (LIBRESSL_VERSION_NUMBER)
-RSA *EVP_PKEY_get0_RSA(EVP_PKEY *pkey) {
-	if (pkey->type != EVP_PKEY_RSA) {
-		return NULL;
-	}
-	return pkey->pkey.rsa;
-}
-#endif
-
 extern int match_user(X509 * x509, const char *login);
 
-static int pam_prompt(pam_handle_t *pamh, int style, char **response, const char *text)
-{
-	int rv;
-	const struct pam_conv *conv;
-	struct pam_message msg;
-	struct pam_response *resp;
-	struct pam_message *(msgp[1]);
-	msgp[0] = &msg;
-
-	msg.msg_style = style;
-	msg.msg = text;
-	rv = pam_get_item(pamh, PAM_CONV, (const void **) &conv);
-	if (rv != PAM_SUCCESS)
-		return rv;
-	if ((conv == NULL) || (conv->conv == NULL))
-		return PAM_CRED_INSUFFICIENT;
-	rv = conv->conv(1, (const struct pam_message **) msgp, &resp, conv->appdata_ptr);
-	if (rv != PAM_SUCCESS)
-		return rv;
-	if ((resp == NULL) || (resp[0].resp == NULL))
-		return !response ? PAM_SUCCESS : PAM_CRED_INSUFFICIENT;
-	if (response) {
-		*response = strdup(resp[0].resp);
-	}
-	/* overwrite memory and release it */
-	memset(resp[0].resp, 0, strlen(resp[0].resp));
-	free(&resp[0]);
-	return PAM_SUCCESS;
-}
-
-static int login(pam_handle_t *pamh, PKCS11_SLOT *slot)
+static int credential_login(pam_handle_t *pamh, PKCS11_SLOT *slot)
 {
 	char *password = NULL;
 	int ok = 0;
 
-	if (!slot->token->loginRequired) {
+	if (0 == slot->token->loginRequired) {
 		ok = 1;
 		goto out;
 	}
 
 	/* try to get stored item */
-	if (pam_get_item(pamh, PAM_AUTHTOK, (void *)&password) == PAM_SUCCESS
-			&& password) {
+	if (PAM_SUCCESS == pam_get_item(pamh, PAM_AUTHTOK, (void *)&password)
+			&& NULL != password) {
 		password = strdup(password);
 	} else {
-		char text[80];
-		const char *prompt;
+		const char *prompt, *pin_info, *suffix;
 		char **response;
 		int msg_style;
 
-		if (slot->token->secureLogin) {
-			prompt = ": Enter PIN on PIN pad";
+		if (slot->token->userPinFinalTry) {
+			pin_info = " (last try)";
+		} else if (slot->token->userPinCountLow) {
+			pin_info = " (PIN count low)";
+		} else {
+			pin_info = "";
+		}
+
+		if (0 != slot->token->secureLogin) {
+			prompt = "Enter PIN on PIN pad";
 			msg_style = PAM_TEXT_INFO;
 			response = NULL;
+			suffix = "";
 		} else {
-			prompt = ": Enter PIN: ";
+			prompt = "Enter PIN";
+			suffix = ": ";
 			/* ask the user for the password if variable text is set */
 			msg_style = PAM_PROMPT_ECHO_OFF;
 			response = &password;
 		}
-		sprintf(text, "%.*s%s",
-				sizeof text - strlen(prompt), slot->token->label, prompt);
-		if (pam_prompt(pamh, msg_style, response, text) != PAM_SUCCESS) {
+
+		if (PAM_SUCCESS != pam_prompt(pamh, msg_style, response, "%s: %s%s%s",
+					slot->token->label, prompt, pin_info, suffix)) {
 			goto out;
 		}
 	}
 
-	/* perform pkcs #11 login */
-	if (PKCS11_login(slot, 0, password) != 0) {
-		pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
+	if (0 != PKCS11_login(slot, 0, password) != 0) {
+		if (slot->token->userPinLocked) {
+			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN locked");
+		} else if (slot->token->userPinFinalTry) {
+			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; one try remaining");
+		} else if (slot->token->userPinCountLow) {
+			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN count low");
+		} else {
+			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
+		}
 		goto out;
 	}
 
 	ok = 1;
 
 out:
-	if (password) {
-		memset(password, 0, strlen(password));
+	if (NULL != password) {
+		OPENSSL_cleanse(password, strlen(password));
 		free(password);
 	}
 
 	return ok;
 }
 
-static int randomize(unsigned char *r, size_t r_len)
+static int credential_find(pam_handle_t * pamh, const char *user,
+		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
+		PKCS11_SLOT **authslot, PKCS11_CERT **authcert)
 {
-	int ok = 0;
+	int token_found = 0;
 
-	int fd = open("/dev/urandom", O_RDONLY);
-	if (fd < 0 || read(fd, r, r_len) != r_len) {
-		pam_syslog(pamh, LOG_ERR, "fatal: failed to read from /dev/urandom: %s",
-				strerror(errno));
-		goto out;
+	if (NULL == authslot || NULL == authcert) {
+		return 0;
 	}
 
-out:
-	if (fd > 0)
-		close(fd);
+	*authcert = NULL;
+	*authslot = NULL;
 
+	while (0 < nslots) {
+		PKCS11_SLOT *slot = NULL;
+		PKCS11_CERT *certs = NULL;
+		unsigned int ncerts = 0;
+
+		slot = PKCS11_find_token(ctx, slots, nslots);
+		if (NULL == slot || NULL == slot->token) {
+			break;
+		}
+		token_found = 1;
+
+		if (slot->token->loginRequired && slot->token->userPinLocked) {
+			pam_syslog(pamh, LOG_DEBUG, "%s: PIN locked",
+					slot->token->label);
+			continue;
+		}
+		pam_syslog(pamh, LOG_DEBUG, "Searching %s for credentials",
+				slot->token->label);
+
+		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &ncerts)) {
+			while (0 < ncerts && NULL != certs) {
+				if (1 == match_user(certs->x509, user)) {
+					*authcert = certs;
+					*authslot = slot;
+					pam_syslog(pamh, LOG_DEBUG, "Found %s",
+							(*authcert)->label);
+					return 1;
+				}
+
+				/* Try the next possible certificate */
+				certs++;
+				ncerts--;
+			}
+		}
+
+		/* Try the next possible slot: PKCS11 slots are implemented as array,
+		 * so starting to look at slot++ and decrementing nslots accordingly
+		 * will search the rest of slots. */
+		slot++;
+		nslots -= (slot - slots);
+		slots = slot;
+		pam_syslog(pamh, LOG_DEBUG, "No authorized credential found");
+	}
+
+	if (0 == token_found) {
+		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "No token found");
+	} else {
+		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "No authorized credentials on token");
+	}
+
+	return 0;
+}
+
+static int randomize(pam_handle_t *pamh, unsigned char *r, size_t r_len)
+{
+	int ok = 0;
+	int fd = open("/dev/urandom", O_RDONLY);
+	if (0 <= fd && read(fd, r, r_len) == r_len) {
+		ok = 1;
+	} else {
+		pam_syslog(pamh, LOG_ERR, "Error reading from /dev/urandom: %s",
+				strerror(errno));
+	}
+	if (0 < fd) {
+		close(fd);
+	}
 	return ok;
 }
 
-static int sign(EVP_MD_CTX *md_ctx, const EVP_MD *md,
-	const unsigned char *m, unsigned int m_len,
-	unsigned char *sigret, unsigned int *siglen, PKCS11_KEY *key)
+static int credential_verify(pam_handle_t *pamh, PKCS11_KEY *key, PKCS11_CERT *certificate)
 {
 	int ok = 0;
-
+	unsigned char challenge[30];
+	unsigned char signature[256];
+	unsigned int siglen = sizeof signature;
+	const EVP_MD *md = EVP_sha1();
+	EVP_PKEY *pubkey = X509_get_pubkey(certificate->x509);
 	EVP_PKEY *privkey = PKCS11_get_private_key(key);
+	EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
 
-	if (!EVP_SignInit(md_ctx, md)
-			|| !EVP_SignUpdate(md_ctx, m, m_len)
-			|| !EVP_SignFinal(md_ctx, sigret, siglen, privkey)) {
-		pam_syslog(pamh, LOG_ERR, "Signing failed: %s\n",
+	/* verify a sha1 hash of the random data, signed by the key */
+	if (1 != randomize(pamh, challenge, sizeof challenge)) {
+		goto err;
+	}
+	if (NULL == pubkey || NULL == privkey || NULL == md_ctx || NULL == md
+			|| !EVP_SignInit(md_ctx, md)
+			|| !EVP_SignUpdate(md_ctx, challenge, sizeof challenge)
+			|| !EVP_SignFinal(md_ctx, signature, &siglen, privkey)
+			|| !EVP_MD_CTX_cleanup(md_ctx)
+			|| !EVP_VerifyInit(md_ctx, md)
+			|| !EVP_VerifyUpdate(md_ctx, challenge, sizeof challenge)
+			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
+		ERR_load_crypto_strings();
+		pam_syslog(pamh, LOG_ERR, "Error verifying credential: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
 		goto err;
 	}
-
 	ok = 1;
 
 err:
-	if (privkey != NULL)
+	if (NULL != pubkey)
+		EVP_PKEY_free(pubkey);
+	if (NULL != privkey)
 		EVP_PKEY_free(privkey);
-	if (md_ctx != NULL) {
+	if (NULL != md_ctx) {
 		EVP_MD_CTX_destroy(md_ctx);
 	}
-
-	return ok;
-}
-
-static int verify(EVP_MD_CTX *md_ctx, const EVP_MD *md,
-	const unsigned char *m, unsigned int m_len,
-	unsigned char *signature, unsigned int siglen, PKCS11_CERT *cert)
-{
-	int ok = 0;
-
-	EVP_PKEY *pubkey = X509_get_pubkey(cert->x509);
-
-	if (!EVP_VerifyInit(md_ctx, md)
-			|| !EVP_VerifyUpdate(md_ctx, m, m_len)
-			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
-		pam_syslog(pamh, LOG_ERR, "Verifying failed: %s\n",
-				ERR_reason_error_string(ERR_get_error()));
-		goto err;
-	}
-
-	ok = 1;
-
-err:
-	if (pubkey != NULL)
-		EVP_PKEY_free(pubkey);
-
 	return ok;
 }
 
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 				   const char **argv)
 {
-	int rv;
 	const char *user;
-
-	PKCS11_CTX *ctx;
-	PKCS11_SLOT *slot, *slots;
-	PKCS11_CERT *certs;
-	unsigned int nslots, ncerts;
-	PKCS11_KEY *authkey;
+	int r;
+	unsigned int nslots = 0;
+	PKCS11_CTX *ctx = NULL;
+	PKCS11_SLOT *authslot = NULL, *slots = NULL;
 	PKCS11_CERT *authcert;
 
-	RSA *rsa;
-	EVP_MD_CTX *md_ctx = NULL;
-
-	unsigned char rand_bytes[RANDOM_SIZE];
-	unsigned char signature[MAX_SIGSIZE];
-	int fd;
-	unsigned siglen;
-	unsigned int i;
-
-	/* check parameters */
-	if (argc != 1) {
-		pam_syslog(pamh, LOG_ERR, "need pkcs11 module as argument");
-		return PAM_ABORT;
-	}
-
 	/* get user name */
-	rv = pam_get_user(pamh, &user, NULL);
-	if (rv != PAM_SUCCESS) {
+	r = pam_get_user(pamh, &user, NULL);
+	if (PAM_SUCCESS != r) {
 		pam_syslog(pamh, LOG_ERR, "pam_get_user() failed %s",
-		       pam_strerror(pamh, rv));
+		       pam_strerror(pamh, r));
 		return PAM_USER_UNKNOWN;
 	}
 
-	/* init openssl */
+	/* Initialize OpenSSL */
 	OpenSSL_add_all_algorithms();
-	ERR_load_crypto_strings();
 
-	/* load pkcs #11 module */
+	/* Load and initialize PKCS#11 module */
 	ctx = PKCS11_CTX_new();
-	if (!ctx
-			|| !PKCS11_CTX_load(ctx, argv[0])
-			|| !PKCS11_enumerate_slots(ctx, &slots, &nslots)) {
-		pam_syslog(pamh, LOG_ERR, "Initializing pkcs11 engine failed: %s\n",
+	if (1 != argc || NULL == ctx || 0 != PKCS11_CTX_load(ctx, argv[0])) {
+		ERR_load_crypto_strings();
+		pam_syslog(pamh, LOG_ERR, "Loading PKCS#11 engine failed: %s\n",
+				ERR_reason_error_string(ERR_get_error()));
+		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "Error loading PKCS#11 module");
+		r = PAM_NO_MODULE_DATA;
+		goto err_not_loaded;
+	}
+	if (0 != PKCS11_enumerate_slots(ctx, &slots, &nslots)) {
+		ERR_load_crypto_strings();
+		pam_syslog(pamh, LOG_ERR, "Initializing PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
 		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "Error initializing PKCS#11 module");
-		return PAM_AUTHINFO_UNAVAIL;
+		r = PAM_AUTHINFO_UNAVAIL;
+		goto err;
 	}
 
-	/* search for the first slot with a token */
-	slot = PKCS11_find_token(ctx, slots, nslots);
-	if (!slot || !slot->token) {
-		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "No smart card found");
-		rv = PAM_AUTHINFO_UNAVAIL;
-		goto out;
+	if (1 != credential_find(pamh, user, ctx, slots, nslots,
+				&authslot, &authcert)) {
+		r = PAM_AUTHINFO_UNAVAIL;
+		goto err;
 	}
-
-	/* get all certs */
-	rv = PKCS11_enumerate_certs(slot->token, &certs, &ncerts);
-	if (rv) {
-		pam_syslog(pamh, LOG_ERR, "PKCS11_enumerate_certs failed");
-		rv = PAM_AUTHINFO_UNAVAIL;
-		goto out;
-	}
-	if (ncerts <= 0) {
-		pam_syslog(pamh, LOG_ERR, "no certificates found");
-		rv = PAM_AUTHINFO_UNAVAIL;
-		goto out;
-	}
-
-	/* find a valid and matching certificates */
-	for (i = 0; i < ncerts; i++) {
-		authcert = &certs[i];
-		if (authcert != NULL) {
-			/* check whether the certificate matches the user */
-			rv = match_user(authcert->x509, user);
-			if (rv < 0) {
-				pam_syslog(pamh, LOG_ERR, "match_user() failed");
-				rv = PAM_AUTHINFO_UNAVAIL;
-				goto out;
-			} else if (rv == 0) {
-				/* this is not the cert we are looking for */
-				authcert = NULL;
-			} else {
-				break;
-			}
+	if (1 != credential_login(pamh, authslot)
+			|| 1 != credential_verify(pamh, PKCS11_find_key(authcert), authcert)) {
+		if (authslot->token->userPinLocked) {
+			r = PAM_MAXTRIES;
+		} else {
+			r = PAM_AUTH_ERR;
 		}
+		goto err;
 	}
 
-	if (!authcert) {
-		pam_prompt(pamh, PAM_ERROR_MSG, NULL, "No authorized credential found");
-		rv = PAM_AUTHINFO_UNAVAIL;
-		goto out;
-	}
+	r = PAM_SUCCESS;
 
-	/* verify a sha1 hash of the random data, signed by the key */
-	siglen = MAX_SIGSIZE;
-	md_ctx = EVP_MD_CTX_create();
-	if (!randomize(rand_bytes, RANDOM_SIZE)
-			|| !login(pamh, slot)
-			|| !sign(md_ctx, EVP_sha1(), rand_bytes, RANDOM_SIZE, signature, &siglen,
-				PKCS11_find_key(authcert))
-			|| !verify(md_ctx, EVP_sha1(), rand_bytes, RANDOM_SIZE, signature,
-				siglen, authcert)) {
-		rv = PAM_AUTH_ERR;
-		goto out;
-	}
-
-	rv = PAM_SUCCESS;
-
-out:
+err:
 	PKCS11_release_all_slots(ctx, slots, nslots);
 	PKCS11_CTX_unload(ctx);
+err_not_loaded:
 	PKCS11_CTX_free(ctx);
-	if (md_ctx != NULL) {
-		EVP_MD_CTX_destroy(md_ctx);
-	}
 
-	return rv;
+	return r;
 }
 
 PAM_EXTERN int pam_sm_setcred(pam_handle_t * pamh, int flags, int argc,
