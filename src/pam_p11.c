@@ -36,7 +36,8 @@
 #include <security/pam_ext.h>
 #else
 #define pam_syslog(handle, level, msg...) syslog(level, ## msg)
-static int pam_prompt(pam_handle_t *pamh, int style, char **response, char *fmt, ...)
+static int pam_vprompt(pam_handle_t *pamh, int style, char **response,
+		const char *fmt, va_list args)
 {
 	int r = PAM_CRED_INSUFFICIENT;
 	const struct pam_conv *conv;
@@ -44,12 +45,8 @@ static int pam_prompt(pam_handle_t *pamh, int style, char **response, char *fmt,
 	struct pam_response *resp = NULL;
 	struct pam_message *(msgp[1]);
 
-	va_list va;
 	char text[128];
-
-	va_start(va, fmt);
-	vsnprintf(text, sizeof text, fmt, va);
-	va_end(va);
+	vsnprintf(text, sizeof text, fmt, args);
 
 	msgp[0] = &msg;
 	msg.msg_style = style;
@@ -85,7 +82,24 @@ err:
 
 extern int match_user(X509 * x509, const char *login);
 
-static int credential_login(pam_handle_t *pamh, PKCS11_SLOT *slot)
+int prompt(int flags, pam_handle_t *pamh, int style, char **response,
+			    const char *fmt, ...)
+{
+	int r;
+
+	if (PAM_SILENT == (flags & PAM_SILENT)) {
+		r = PAM_SUCCESS;
+	} else {
+		va_list args;
+		va_start (args, fmt);
+		r = pam_vprompt(pamh, style, response, fmt, args);
+		va_end(args);
+	}
+
+	return r;
+}
+
+static int credential_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 {
 	char *password = NULL;
 	int ok = 0;
@@ -100,7 +114,7 @@ static int credential_login(pam_handle_t *pamh, PKCS11_SLOT *slot)
 			&& NULL != password) {
 		password = strdup(password);
 	} else {
-		const char *prompt, *pin_info, *suffix;
+		const char *text, *pin_info, *suffix;
 		char **response;
 		int msg_style;
 
@@ -113,33 +127,33 @@ static int credential_login(pam_handle_t *pamh, PKCS11_SLOT *slot)
 		}
 
 		if (0 != slot->token->secureLogin) {
-			prompt = "Enter PIN on PIN pad";
+			text = "Enter PIN on PIN pad";
 			msg_style = PAM_TEXT_INFO;
 			response = NULL;
 			suffix = "";
 		} else {
-			prompt = "Enter PIN";
+			text = "Enter PIN";
 			suffix = ": ";
 			/* ask the user for the password if variable text is set */
 			msg_style = PAM_PROMPT_ECHO_OFF;
 			response = &password;
 		}
 
-		if (PAM_SUCCESS != pam_prompt(pamh, msg_style, response, "%s: %s%s%s",
-					slot->token->label, prompt, pin_info, suffix)) {
+		if (PAM_SUCCESS != prompt(flags, pamh, msg_style, response, "%s: %s%s%s",
+					slot->token->label, text, pin_info, suffix)) {
 			goto out;
 		}
 	}
 
 	if (0 != PKCS11_login(slot, 0, password) != 0) {
 		if (slot->token->userPinLocked) {
-			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN locked");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN locked");
 		} else if (slot->token->userPinFinalTry) {
-			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; one try remaining");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; one try remaining");
 		} else if (slot->token->userPinCountLow) {
-			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN count low");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN count low");
 		} else {
-			pam_prompt(pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
 		}
 		goto out;
 	}
@@ -155,7 +169,7 @@ out:
 	return ok;
 }
 
-static int credential_find(pam_handle_t * pamh, const char *user,
+static int credential_find(pam_handle_t * pamh, int flags, const char *user,
 		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
 		PKCS11_SLOT **authslot, PKCS11_CERT **authcert)
 {
@@ -213,9 +227,9 @@ static int credential_find(pam_handle_t * pamh, const char *user,
 	}
 
 	if (0 == token_found) {
-		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "No token found");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No token found");
 	} else {
-		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "No authorized credentials on token");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No authorized credentials on token");
 	}
 
 	return 0;
@@ -237,7 +251,7 @@ static int randomize(pam_handle_t *pamh, unsigned char *r, size_t r_len)
 	return ok;
 }
 
-static int credential_verify(pam_handle_t *pamh, PKCS11_KEY *key, PKCS11_CERT *certificate)
+static int credential_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *key, PKCS11_CERT *certificate)
 {
 	int ok = 0;
 	unsigned char challenge[30];
@@ -305,7 +319,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		ERR_load_crypto_strings();
 		pam_syslog(pamh, LOG_ERR, "Loading PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
-		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "Error loading PKCS#11 module");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "Error loading PKCS#11 module");
 		r = PAM_NO_MODULE_DATA;
 		goto err_not_loaded;
 	}
@@ -313,18 +327,19 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		ERR_load_crypto_strings();
 		pam_syslog(pamh, LOG_ERR, "Initializing PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
-		pam_prompt(pamh, PAM_ERROR_MSG , NULL, "Error initializing PKCS#11 module");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "Error initializing PKCS#11 module");
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
 
-	if (1 != credential_find(pamh, user, ctx, slots, nslots,
+	if (1 != credential_find(pamh, flags, user, ctx, slots, nslots,
 				&authslot, &authcert)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
-	if (1 != credential_login(pamh, authslot)
-			|| 1 != credential_verify(pamh, PKCS11_find_key(authcert), authcert)) {
+	if (1 != credential_login(pamh, flags, authslot)
+			|| 1 != credential_verify(pamh, flags,
+				PKCS11_find_key(authcert), authcert)) {
 		if (authslot->token->userPinLocked) {
 			r = PAM_MAXTRIES;
 		} else {
