@@ -61,6 +61,11 @@ static int pam_vprompt(pam_handle_t *pamh, int style, char **response,
 	if (NULL != response) {
 		if (resp[0].resp) {
 			*response = strdup(resp[0].resp);
+			if (NULL == *response) {
+				pam_syslog(pamh, LOG_CRIT, "strdup() failed: %s",
+						strerror(errno));
+				goto err;
+			}
 		} else {
 			*response = NULL;
 		}
@@ -106,13 +111,18 @@ static int credential_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 
 	if (0 == slot->token->loginRequired) {
 		ok = 1;
-		goto out;
+		goto err;
 	}
 
 	/* try to get stored item */
 	if (PAM_SUCCESS == pam_get_item(pamh, PAM_AUTHTOK, (void *)&password)
 			&& NULL != password) {
 		password = strdup(password);
+		if (NULL == password) {
+			pam_syslog(pamh, LOG_CRIT, "strdup() failed: %s",
+					strerror(errno));
+			goto err;
+		}
 	} else {
 		const char *text, *pin_info, *suffix;
 		char **response;
@@ -141,7 +151,7 @@ static int credential_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 
 		if (PAM_SUCCESS != prompt(flags, pamh, msg_style, response, "%s: %s%s%s",
 					slot->token->label, text, pin_info, suffix)) {
-			goto out;
+			goto err;
 		}
 	}
 
@@ -155,12 +165,12 @@ static int credential_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 		} else {
 			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
 		}
-		goto out;
+		goto err;
 	}
 
 	ok = 1;
 
-out:
+err:
 	if (NULL != password) {
 		OPENSSL_cleanse(password, strlen(password));
 		free(password);
@@ -242,7 +252,7 @@ static int randomize(pam_handle_t *pamh, unsigned char *r, size_t r_len)
 	if (0 <= fd && read(fd, r, r_len) == r_len) {
 		ok = 1;
 	} else {
-		pam_syslog(pamh, LOG_ERR, "Error reading from /dev/urandom: %s",
+		pam_syslog(pamh, LOG_CRIT, "Error reading from /dev/urandom: %s",
 				strerror(errno));
 	}
 	if (0 < fd) {
@@ -275,7 +285,7 @@ static int credential_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *key, PKC
 			|| !EVP_VerifyUpdate(md_ctx, challenge, sizeof challenge)
 			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
 		ERR_load_crypto_strings();
-		pam_syslog(pamh, LOG_ERR, "Error verifying credential: %s\n",
+		pam_syslog(pamh, LOG_DEBUG, "Error verifying credential: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
 		goto err;
 	}
@@ -317,7 +327,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	ctx = PKCS11_CTX_new();
 	if (1 != argc || NULL == ctx || 0 != PKCS11_CTX_load(ctx, argv[0])) {
 		ERR_load_crypto_strings();
-		pam_syslog(pamh, LOG_ERR, "Loading PKCS#11 engine failed: %s\n",
+		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
 		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "Error loading PKCS#11 module");
 		r = PAM_NO_MODULE_DATA;
@@ -325,7 +335,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 	if (0 != PKCS11_enumerate_slots(ctx, &slots, &nslots)) {
 		ERR_load_crypto_strings();
-		pam_syslog(pamh, LOG_ERR, "Initializing PKCS#11 engine failed: %s\n",
+		pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
 		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "Error initializing PKCS#11 module");
 		r = PAM_AUTHINFO_UNAVAIL;
@@ -369,7 +379,7 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t * pamh, int flags, int argc,
 PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 				const char **argv)
 {
-	pam_syslog(pamh, LOG_WARNING,
+	pam_syslog(pamh, LOG_DEBUG,
 	       "Function pam_sm_acct_mgmt() is not implemented in this module");
 	return PAM_SERVICE_ERR;
 }
@@ -377,7 +387,7 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 PAM_EXTERN int pam_sm_open_session(pam_handle_t * pamh, int flags, int argc,
 				   const char **argv)
 {
-	pam_syslog(pamh, LOG_WARNING,
+	pam_syslog(pamh, LOG_DEBUG,
 	       "Function pam_sm_open_session() is not implemented in this module");
 	return PAM_SERVICE_ERR;
 }
@@ -385,7 +395,7 @@ PAM_EXTERN int pam_sm_open_session(pam_handle_t * pamh, int flags, int argc,
 PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh, int flags, int argc,
 				    const char **argv)
 {
-	pam_syslog(pamh, LOG_WARNING,
+	pam_syslog(pamh, LOG_DEBUG,
 	       "Function pam_sm_close_session() is not implemented in this module");
 	return PAM_SERVICE_ERR;
 }
@@ -393,7 +403,7 @@ PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh, int flags, int argc,
 PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 				const char **argv)
 {
-	pam_syslog(pamh, LOG_WARNING,
+	pam_syslog(pamh, LOG_DEBUG,
 	       "Function pam_sm_chauthtok() is not implemented in this module");
 	return PAM_SERVICE_ERR;
 }
