@@ -17,11 +17,11 @@ noinst_PROGRAMS = test_pam_p11_openssh test_pam_p11_opensc
 
 test_pam_p11_openssh_SOURCES = test.c $(pam_p11_openssh_la_SOURCES)
 test_pam_p11_openssh_LDADD   = -lpam_misc
-test_pam_p11_openssh_CFLAGS  = $(AM_CFLAGS)
+test_pam_p11_openssh_CFLAGS  = $(AM_CFLAGS) -DLIBDIR=\"$(libdir)\"
 
 test_pam_p11_opensc_SOURCES  = test.c $(pam_p11_opensc_la_SOURCES)
 test_pam_p11_opensc_LDADD    = -lpam_misc
-test_pam_p11_opensc_CFLAGS   = $(AM_CFLAGS)
+test_pam_p11_opensc_CFLAGS   = $(AM_CFLAGS) -DLIBDIR=\"$(libdir)\"
 
 format:
 	indent -kr -i8 -ts8 -sob -l80 -ss -ncs *.c *.h
