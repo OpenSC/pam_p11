@@ -61,19 +61,6 @@ ifdef(
 	[AC_PROG_LIBTOOL]
 )
 
-dnl Checks for header files.
-AC_HEADER_STDC
-AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([ \
-	string.h syslog.h fcntl.h unistd.h security/pam_ext.h \
-])
-AC_TYPE_SIZE_T
-AC_FUNC_MALLOC
-AC_FUNC_REALLOC
-AC_FUNC_STAT
-AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([memset strdup strerror])
-
 PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.4],, [AC_MSG_ERROR([libp11 is required])])
 PKG_CHECK_MODULES(
 	[OPENSSL],
@@ -102,6 +89,26 @@ if test -z "${PAM_LIBS}"; then
 		[AC_MSG_ERROR([Cannot find pam])]
 	)
 fi
+
+saved_CFLAGS="${CFLAGS}"
+CFLAGS="${CFLAGS} ${OPENSSL_CFLAGS} ${LIBP11_CFLAGS} ${PAM_CFLAGS}"
+LIBS="$LIBS ${OPENSSL_LIBS} ${LIBP11_LIBS} ${PAM_LIBS}"
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS([ \
+	string.h syslog.h fcntl.h unistd.h security/pam_ext.h \
+])
+AC_TYPE_SIZE_T
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
+AC_FUNC_STAT
+AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([memset strdup strerror])
+
+CFLAGS="${saved_CFLAGS}"
+LIBS="$saved_LIBS"
 
 AC_SUBST([pamdir])
 
