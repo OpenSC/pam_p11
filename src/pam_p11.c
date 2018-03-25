@@ -107,7 +107,7 @@ int prompt(int flags, pam_handle_t *pamh, int style, char **response,
 	return r;
 }
 
-static int credential_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
+static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 {
 	char *password = NULL;
 	int ok = 0;
@@ -127,46 +127,36 @@ static int credential_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 			goto err;
 		}
 	} else {
-		const char *text, *pin_info, *suffix;
-		char **response;
-		int msg_style;
+		const char *pin_info;
 
 		if (slot->token->userPinFinalTry) {
 			pin_info = " (last try)";
-		} else if (slot->token->userPinCountLow) {
-			pin_info = " (PIN count low)";
 		} else {
 			pin_info = "";
 		}
 
 		if (0 != slot->token->secureLogin) {
-			text = "Enter PIN on PIN pad";
-			msg_style = PAM_TEXT_INFO;
-			response = NULL;
-			suffix = "";
+			prompt(flags, pamh, PAM_TEXT_INFO, NULL,
+					"Login on PIN pad with %s%s",
+					slot->token->label, pin_info);
 		} else {
-			text = "Enter PIN";
-			suffix = ": ";
 			/* ask the user for the password if variable text is set */
-			msg_style = PAM_PROMPT_ECHO_OFF;
-			response = &password;
-		}
-
-		if (PAM_SUCCESS != prompt(flags, pamh, msg_style, response, "%s: %s%s%s",
-					slot->token->label, text, pin_info, suffix)) {
-			goto err;
+			if (PAM_SUCCESS != prompt(flags, pamh,
+						PAM_PROMPT_ECHO_OFF, &password,
+						"Login with %s%s: ",
+						slot->token->label, pin_info)) {
+				goto err;
+			}
 		}
 	}
 
 	if (0 != PKCS11_login(slot, 0, password) != 0) {
 		if (slot->token->userPinLocked) {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN locked");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified; PIN locked");
 		} else if (slot->token->userPinFinalTry) {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; one try remaining");
-		} else if (slot->token->userPinCountLow) {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN; PIN count low");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified; one try remaining");
 		} else {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying PIN");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified");
 		}
 		goto err;
 	}
@@ -182,7 +172,7 @@ err:
 	return ok;
 }
 
-static int credential_find(pam_handle_t * pamh, int flags, const char *user,
+static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
 		PKCS11_SLOT **authslot, PKCS11_CERT **authcert)
 {
@@ -211,7 +201,7 @@ static int credential_find(pam_handle_t * pamh, int flags, const char *user,
 					slot->token->label);
 			continue;
 		}
-		pam_syslog(pamh, LOG_DEBUG, "Searching %s for credentials",
+		pam_syslog(pamh, LOG_DEBUG, "Searching %s for keys",
 				slot->token->label);
 
 		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &ncerts)) {
@@ -236,13 +226,13 @@ static int credential_find(pam_handle_t * pamh, int flags, const char *user,
 		slot++;
 		nslots -= (slot - slots);
 		slots = slot;
-		pam_syslog(pamh, LOG_DEBUG, "No authorized credential found");
+		pam_syslog(pamh, LOG_DEBUG, "No authorized key found");
 	}
 
 	if (0 == token_found) {
 		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No token found");
 	} else {
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No authorized credentials on token");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No authorized keys on token");
 	}
 
 	return 0;
@@ -264,7 +254,7 @@ static int randomize(pam_handle_t *pamh, unsigned char *r, size_t r_len)
 	return ok;
 }
 
-static int credential_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *key, PKCS11_CERT *certificate)
+static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *key, PKCS11_CERT *certificate)
 {
 	int ok = 0;
 	unsigned char challenge[30];
@@ -288,8 +278,9 @@ static int credential_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *key, PKC
 			|| !EVP_VerifyUpdate(md_ctx, challenge, sizeof challenge)
 			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
 		ERR_load_crypto_strings();
-		pam_syslog(pamh, LOG_DEBUG, "Error verifying credential: %s\n",
+		pam_syslog(pamh, LOG_DEBUG, "Error verifying key: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
+		prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying key");
 		goto err;
 	}
 	ok = 1;
@@ -345,13 +336,13 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		goto err;
 	}
 
-	if (1 != credential_find(pamh, flags, user, ctx, slots, nslots,
+	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
 				&authslot, &authcert)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
-	if (1 != credential_login(pamh, flags, authslot)
-			|| 1 != credential_verify(pamh, flags,
+	if (1 != key_login(pamh, flags, authslot)
+			|| 1 != key_verify(pamh, flags,
 				PKCS11_find_key(authcert), authcert)) {
 		if (authslot->token->userPinLocked) {
 			r = PAM_MAXTRIES;
