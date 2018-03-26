@@ -17,6 +17,7 @@ extern int match_user(X509 * x509, const char *login)
 	struct passwd *pw;
 	int found;
 	BIO *in;
+	X509 *cert;
 
 	if (!x509)
 		return -1;
@@ -41,18 +42,16 @@ extern int match_user(X509 * x509, const char *login)
 	}
 
 	found = 0;
-	for (;;) {
-		X509 *cert = PEM_read_bio_X509(in, NULL, 0, NULL);
-		if (!cert) {
-			break;
-		}
+	for (cert = PEM_read_bio_X509(in, NULL, 0, NULL);
+			cert != NULL;
+			cert = PEM_read_bio_X509(in, &cert, 0, NULL)) {
 		if (X509_cmp(cert, x509) == 0) {
 			found = 1;
-		}
-		X509_free(cert);
-		if (found) {
 			break;
 		}
+	}
+	if (cert) {
+		X509_free(cert);
 	}
 	BIO_free(in);
 
