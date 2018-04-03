@@ -54,13 +54,13 @@ auth       required     pam_unix.so nullok
 Also each user needs to create a `~/.eid/` directory and create a file `~/.eid/authorized_certificates`. You can do that via
 
 ```
-mkdir ~/.eid
+mkdir -p ~/.eid
 chmod 0755 ~/.eid
 pkcs15-tool -r 45 >> ~/.eid/authorized_certificates
 chmod 0644 ~/.eid/authorized_certificates
 ```
 
-This example uses the "pkcs15-tool" command from opensc to read the default user certificate (id 45) from the smart card in reader 0.
+This example uses the "pkcs15-tool" command from opensc to read the default user certificate (id `45`) from the smart card.
 
 It is very important that only the user of the file can write to it.  You can have any number of certificates in that file. The certificates need to be in "pem" format. "der" format is currently not supported.
 
@@ -84,15 +84,15 @@ Also while testing it is best to keep a door open, i.e. allow also login via pas
 
 ```
 auth       sufficient   pam_p11_openssh.so /usr/lib/opensc-pkcs11.so
-auth       required   pam_unix.so nullok
+auth       required     pam_unix.so nullok
 ```
 
 Also each user needs to create a `~/.ssh/` directory and create a file `~/.ssh/authorized_keys`. You can do that via
 
 ```
-mkdir ~/.ssh
+mkdir -p ~/.ssh
 chmod 0755 ~/.ssh
-ssh-keygen -D 0 >> ~/.ssh/authorized_keys
+ssh-keygen -D /usr/lib/opensc-pkcs11.so >> ~/.ssh/authorized_keys
 chmod 0644 ~/.ssh/authorized_keys
 ```
 
@@ -104,4 +104,4 @@ Note it is currently not possible to convert existing ssh keys into pem format a
 
 ## Security Note
 
-Both pam_p11 modules are plain, they simple compare rsa public keys and request the cryptographic token to sign some random data and verifiy the signature with the public key. No CA chain checking is done, no CRL is looked at, and they don't know what OCSP is. This works fine for small installations, but if you want any of those features, please have a look at [Pam_pkcs11](https://github.com/OpenSC/pam_pkcs11) for a fully fledged pam module for smart card authentication.
+Both pam_p11 modules are plain, they simple compare public keys and request the cryptographic token to sign some random data and verifiy the signature with the public key. No CA chain checking is done, no CRL is looked at, and they don't know what OCSP is. This works fine for small installations, but if you want any of those features, please have a look at [Pam_pkcs11](https://github.com/OpenSC/pam_pkcs11) for a fully fledged pam module for smart card authentication.
