@@ -17,7 +17,7 @@ extern int match_user(EVP_PKEY *authkey, const char *login)
 	struct passwd *pw;
 	int found;
 	BIO *in;
-	X509 *cert;
+	X509 *cert = NULL;
 
 	if (NULL == authkey || NULL == login)
 		return -1;
@@ -39,17 +39,25 @@ extern int match_user(EVP_PKEY *authkey, const char *login)
 	}
 
 	found = 0;
-	for (cert = PEM_read_bio_X509(in, NULL, 0, NULL);
-			cert != NULL;
-			cert = PEM_read_bio_X509(in, &cert, 0, NULL)) {
-		if (1 == EVP_PKEY_cmp(authkey, X509_get_pubkey(cert))) {
-			found = 1;
+	do {
+		EVP_PKEY *key;
+		if (NULL == PEM_read_bio_X509(in, &cert, 0, NULL)) {
 			break;
 		}
-	}
+		key = X509_get_pubkey(cert);
+		if (key == NULL)
+			continue;
+
+		if (1 == EVP_PKEY_cmp(authkey, key)) {
+			found = 1;
+		}
+		EVP_PKEY_free(key);
+	} while (found == 0);
+
 	if (cert) {
 		X509_free(cert);
 	}
+
 	BIO_free(in);
 
 	return found;

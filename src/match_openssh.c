@@ -15,7 +15,7 @@
  * and misc.c read_keyfile_line and key.c
  */
 
-#define OPENSSH_LINE_MAX 8192	/* from openssh SSH_MAX_PUBKEY_BYTES */
+#define OPENSSH_LINE_MAX 16384	/* from openssh SSH_MAX_PUBKEY_BYTES */
 
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L) || defined (LIBRESSL_VERSION_NUMBER)
 void RSA_get0_key(const RSA *r,
@@ -233,48 +233,12 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	return key;
 }
 
-static void add_key(EVP_PKEY * key, EVP_PKEY *** keys, int *nkeys)
-{
-	EVP_PKEY **keys2;
-	/* sanity checks */
-	if (!key)
-		return;
-
-	if (!keys)
-		return;
-
-	if (!nkeys)
-		return;
-
-	/* no keys so far */
-	if (!*keys) {
-		*keys = malloc(sizeof(void *));
-		if (!*keys)
-			return;
-		*keys[0] = key;
-		*nkeys = 1;
-		return;
-	}
-
-	/* enlarge */
-
-	keys2 = malloc(sizeof(void *) * ((*nkeys) + 1));
-	if (!keys2)
-		return;
-
-	memcpy(keys2, *keys, sizeof(void *) * (*nkeys));
-	keys2[*nkeys] = key;
-
-	free(*keys);
-	*keys = keys2;
-	(*nkeys)++;
-}
-
 extern int match_user(EVP_PKEY *authkey, const char *login)
 {
 	char filename[PATH_MAX];
 	char line[OPENSSH_LINE_MAX];
 	struct passwd *pw;
+	int found;
 	FILE *file;
 	EVP_PKEY **keys = NULL;
 	const BIGNUM *rsa_e, *rsa_n, *auth_e, *auth_n;
@@ -290,38 +254,37 @@ extern int match_user(EVP_PKEY *authkey, const char *login)
 	if (!file)
 		return -1;
 
-	for (;;) {
+	found = 0;
+	do {
+		EVP_PKEY *key = NULL;
 		char *cp;
-		if (!fgets(line, OPENSSH_LINE_MAX, file))
+		if (!fgets(line, sizeof line, file))
 			break;
 
 		/* Skip leading whitespace, empty and comment lines. */
-		for (cp = line; *cp == ' ' || *cp == '\t'; cp++)
-
-			if (!*cp || *cp == '\n' || *cp == '#')
-				continue;
+		for (cp = line; *cp == ' ' || *cp == '\t'; cp++) {
+		}
+		if (!*cp || *cp == '\n' || *cp == '#') {
+			continue;
+		}
 
 		if (*cp >= '0' && *cp <= '9') {
 			/* ssh v1 key format */
-			EVP_PKEY *key = ssh1_line_to_key(cp);
-			if (key)
-				add_key(key, &keys, &nkeys);
-
-		}
-		if (strncmp("ssh-rsa", cp, 7) == 0) {
+			key = ssh1_line_to_key(cp);
+		} else if (strncmp("ssh-rsa", cp, 7) == 0) {
 			/* ssh v2 rsa key format */
-			EVP_PKEY *key = ssh2_line_to_key(cp);
-			if (key)
-				add_key(key, &keys, &nkeys);
+			key = ssh2_line_to_key(cp);
 		}
-	}
+		if (key == NULL)
+			continue;
+
+		if (1 == EVP_PKEY_cmp(authkey, key)) {
+			found = 1;
+		}
+		EVP_PKEY_free(key);
+	} while (found == 0);
 
 	fclose(file);
 
-	for (i = 0; i < nkeys; i++) {
-		if (1 == EVP_PKEY_cmp(authkey, keys[i])) {
-			return 1;	/* FOUND */
-		}
-	}
-	return 0;
+	return found;
 }
