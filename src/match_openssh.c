@@ -270,20 +270,15 @@ static void add_key(EVP_PKEY * key, EVP_PKEY *** keys, int *nkeys)
 	(*nkeys)++;
 }
 
-extern int match_user(X509 * x509, const char *login)
+extern int match_user(EVP_PKEY *authkey, const char *login)
 {
 	char filename[PATH_MAX];
 	char line[OPENSSH_LINE_MAX];
 	struct passwd *pw;
 	FILE *file;
 	EVP_PKEY **keys = NULL;
-	EVP_PKEY *authkey;
 	const BIGNUM *rsa_e, *rsa_n, *auth_e, *auth_n;
 	int nkeys = 0, i;
-
-	authkey = X509_get_pubkey(x509);
-	if (!authkey)
-		return 0;
 
 	pw = getpwnam(login);
 	if (!pw || !pw->pw_dir)
@@ -324,24 +319,9 @@ extern int match_user(X509 * x509, const char *login)
 	fclose(file);
 
 	for (i = 0; i < nkeys; i++) {
-		RSA *authrsa, *rsa;
-
-		authrsa = EVP_PKEY_get1_RSA(authkey);
-		if (!authrsa)
-			continue;	/* not RSA */
-
-		rsa = EVP_PKEY_get1_RSA(keys[i]);
-		if (!rsa)
-			continue;	/* not RSA */
-
-		RSA_get0_key(rsa, &rsa_n, &rsa_e, NULL);
-		RSA_get0_key(authrsa, &auth_n, &auth_e, NULL);
-
-		if (BN_cmp(rsa_e, auth_e) != 0)
-			continue;
-		if (BN_cmp(rsa_n, auth_n) != 0)
-			continue;
-		return 1;	/* FOUND */
+		if (1 == EVP_PKEY_cmp(authkey, keys[i])) {
+			return 1;	/* FOUND */
+		}
 	}
 	return 0;
 }

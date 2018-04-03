@@ -88,7 +88,7 @@ err:
 #define PAM_EXTERN extern
 #endif
 
-extern int match_user(X509 * x509, const char *login);
+extern int match_user(EVP_PKEY *authkey, const char *login);
 
 int prompt(int flags, pam_handle_t *pamh, int style, char **response,
 			    const char *fmt, ...)
@@ -174,21 +174,22 @@ err:
 
 static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
-		PKCS11_SLOT **authslot, PKCS11_CERT **authcert)
+		PKCS11_SLOT **authslot, PKCS11_KEY **authkey)
 {
 	int token_found = 0;
 
-	if (NULL == authslot || NULL == authcert) {
+	if (NULL == authslot || NULL == authkey) {
 		return 0;
 	}
 
-	*authcert = NULL;
+	*authkey = NULL;
 	*authslot = NULL;
 
 	while (0 < nslots) {
 		PKCS11_SLOT *slot = NULL;
 		PKCS11_CERT *certs = NULL;
-		unsigned int ncerts = 0;
+		PKCS11_KEY *keys = NULL;
+		unsigned int count = 0;
 
 		slot = PKCS11_find_token(ctx, slots, nslots);
 		if (NULL == slot || NULL == slot->token) {
@@ -204,19 +205,48 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		pam_syslog(pamh, LOG_DEBUG, "Searching %s for keys",
 				slot->token->label);
 
-		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &ncerts)) {
-			while (0 < ncerts && NULL != certs) {
-				if (1 == match_user(certs->x509, user)) {
-					*authcert = certs;
+		if (0 == PKCS11_enumerate_public_keys(slot->token, &keys, &count)) {
+			while (0 < count && NULL != keys) {
+				EVP_PKEY *pubkey = PKCS11_get_public_key(keys);
+				int r = match_user(pubkey, user);
+				if (NULL != pubkey) {
+					EVP_PKEY_free(pubkey);
+				}
+				if (1 == r) {
+					*authkey = keys;
 					*authslot = slot;
 					pam_syslog(pamh, LOG_DEBUG, "Found %s",
-							(*authcert)->label);
+							keys->label);
+					return 1;
+				}
+
+				/* Try the next possible public key */
+				keys++;
+				count--;
+			}
+		}
+
+		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &count)) {
+			while (0 < count && NULL != certs) {
+				EVP_PKEY *pubkey = X509_get_pubkey(certs->x509);
+				int r = match_user(pubkey, user);
+				if (NULL != pubkey) {
+					EVP_PKEY_free(pubkey);
+				}
+				if (1 == r) {
+					*authkey = PKCS11_find_key(certs);
+					if (NULL == *authkey) {
+						continue;
+					}
+					*authslot = slot;
+					pam_syslog(pamh, LOG_DEBUG, "Found %s",
+							certs->label);
 					return 1;
 				}
 
 				/* Try the next possible certificate */
 				certs++;
-				ncerts--;
+				count--;
 			}
 		}
 
@@ -254,16 +284,16 @@ static int randomize(pam_handle_t *pamh, unsigned char *r, size_t r_len)
 	return ok;
 }
 
-static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *key, PKCS11_CERT *certificate)
+static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 {
 	int ok = 0;
 	unsigned char challenge[30];
 	unsigned char signature[256];
 	unsigned int siglen = sizeof signature;
 	const EVP_MD *md = EVP_sha1();
-	EVP_PKEY *pubkey = X509_get_pubkey(certificate->x509);
-	EVP_PKEY *privkey = PKCS11_get_private_key(key);
 	EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
+	EVP_PKEY *privkey = PKCS11_get_private_key(authkey);
+	EVP_PKEY *pubkey = PKCS11_get_public_key(authkey);
 
 	/* verify a sha1 hash of the random data, signed by the key */
 	if (1 != randomize(pamh, challenge, sizeof challenge)) {
@@ -304,7 +334,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	unsigned int nslots = 0;
 	PKCS11_CTX *ctx = NULL;
 	PKCS11_SLOT *authslot = NULL, *slots = NULL;
-	PKCS11_CERT *authcert;
+	PKCS11_KEY *authkey;
 
 	/* get user name */
 	r = pam_get_user(pamh, &user, NULL);
@@ -337,13 +367,12 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
-				&authslot, &authcert)) {
+				&authslot, &authkey)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
 	if (1 != key_login(pamh, flags, authslot)
-			|| 1 != key_verify(pamh, flags,
-				PKCS11_find_key(authcert), authcert)) {
+			|| 1 != key_verify(pamh, flags, authkey)) {
 		if (authslot->token->userPinLocked) {
 			r = PAM_MAXTRIES;
 		} else {

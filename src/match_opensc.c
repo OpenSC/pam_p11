@@ -11,7 +11,7 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
-extern int match_user(X509 * x509, const char *login)
+extern int match_user(EVP_PKEY *authkey, const char *login)
 {
 	char filename[PATH_MAX];
 	struct passwd *pw;
@@ -19,10 +19,7 @@ extern int match_user(X509 * x509, const char *login)
 	BIO *in;
 	X509 *cert;
 
-	if (!x509)
-		return -1;
-
-	if (!login)
+	if (NULL == authkey || NULL == login)
 		return -1;
 
 	pw = getpwnam(login);
@@ -45,7 +42,7 @@ extern int match_user(X509 * x509, const char *login)
 	for (cert = PEM_read_bio_X509(in, NULL, 0, NULL);
 			cert != NULL;
 			cert = PEM_read_bio_X509(in, &cert, 0, NULL)) {
-		if (X509_cmp(cert, x509) == 0) {
+		if (1 == EVP_PKEY_cmp(authkey, X509_get_pubkey(cert))) {
 			found = 1;
 			break;
 		}
