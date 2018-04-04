@@ -233,7 +233,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	return key;
 }
 
-extern int match_user(EVP_PKEY *authkey, const char *login)
+extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
 {
 	char filename[PATH_MAX];
 	char line[OPENSSH_LINE_MAX];

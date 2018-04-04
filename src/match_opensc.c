@@ -11,7 +11,7 @@
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 
-extern int match_user(EVP_PKEY *authkey, const char *login)
+extern int match_user_opensc(EVP_PKEY *authkey, const char *login)
 {
 	char filename[PATH_MAX];
 	struct passwd *pw;

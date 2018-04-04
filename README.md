@@ -4,10 +4,10 @@ Pam_p11 is a plugable authentication module (pam) package for using crpytographi
 
 Pam_p11 uses [libp11](https://github.com/OpenSC/libp11/) to access any PKCS#11 module. It should be compatible with any implementation, but it is primarely developed using [OpenSC](https://github.com/OpenSC/OpenSC/).
 
-Pam_p11 implements two authentication modules:
+Pam_p11 implements two authentication methods:
 
-- pam_p11_openssh authenticates the user using his openssh `~/.ssh/authorized_keys` file.
-- pam_p11_opensc authenticates the user using certificates found in `~/.eid/authorized_certificates`.
+- verify a token using a known public key found in OpenSSH's `~/.ssh/authorized_keys`.
+- verify a token using a known certificate found in `~/.eid/authorized_certificates`.
 
 Pam_p11 is very simple, it has no config file, no options other than the PKCS#11 module file, does not know about certificate chains, certificate authorities, revocation lists or OCSP. Perfect for the small installation with no frills.
 
@@ -28,9 +28,9 @@ make install
 
 Pam_p11 depends on pkg-config, openssl, libp11 and pam.  If you don't have pkg-config installed, please do so and try again.  If pkg-config is not found, please change your PATH environment setting.  If openssl is not installed, please do so. If openssl is not found, please change your PKG_CONFIG_PATH environment setting to include the directory with "openssl.pc" or "libp11.pc" file. Some linux distributions split openssl into a runtime package and a development package, you need to install both. Same might be true for pam and libp11.
 
-## Using pam_p11_opensc
+## Using pam_p11
 
-To use pam_p11_opensc with some application like login, edit /etc/pam.d/login and replace
+To use pam_p11 with some application like login, edit /etc/pam.d/login and replace
 
 ```
 auth       required     pam_unix.so nullok
@@ -39,19 +39,21 @@ auth       required     pam_unix.so nullok
 with
 
 ```
-auth       required     pam_p11_opensc.so /usr/lib/opensc-pkcs11.so
+auth       required     pam_p11.so /usr/lib/opensc-pkcs11.so
 ```
 
 Replace `/usr/lib/opensc-pkcs11.so` with your PKCS#11 implementation.
 
-Also while testing it is best to keep a door open, i.e. allow also login via passwords. To try pam_p11_opensc first and then password put into your pam configuration:
+Also while testing it is best to keep a door open, i.e. allow also login via passwords. To try pam_p11 first and then password put into your pam configuration:
 
 ```
-auth       sufficient   pam_p11_opensc.so /usr/lib/opensc-pkcs11.so
+auth       sufficient   pam_p11.so /usr/lib/opensc-pkcs11.so
 auth       required     pam_unix.so nullok
 ```
 
-Also each user needs to create a `~/.eid/` directory and create a file `~/.eid/authorized_certificates`. You can do that via
+### User configuration via `~/.eid/authorized_certificates`
+
+A user may create a `~/.eid/` directory and create a file `~/.eid/authorized_certificates` with the authorized certificate. You can do that via
 
 ```
 mkdir -p ~/.eid
@@ -64,30 +66,9 @@ This example uses the "pkcs15-tool" command from opensc to read the default user
 
 It is very important that only the user of the file can write to it.  You can have any number of certificates in that file. The certificates need to be in "pem" format. "der" format is currently not supported.
 
-## Using pam_p11_openssh
+### User configuration via `~/.ssh/authorized_keys`
 
-To use pam_p11_openssh with some application like login, edit /etc/pam.d/login and replace
-
-```
-auth       required     pam_unix.so nullok
-```
-
-with
-
-```
-auth       required     pam_p11_openssh.so /usr/lib/opensc-pkcs11.so
-```
-
-Replace `/usr/lib/opensc-pkcs11.so` with your PKCS#11 implementation.
-
-Also while testing it is best to keep a door open, i.e. allow also login via passwords. To try pam_p11_opensc first and then password put into your pam configuration:
-
-```
-auth       sufficient   pam_p11_openssh.so /usr/lib/opensc-pkcs11.so
-auth       required     pam_unix.so nullok
-```
-
-Also each user needs to create a `~/.ssh/` directory and create a file `~/.ssh/authorized_keys`. You can do that via
+A user may create a `~/.ssh/` directory and create a file `~/.ssh/authorized_keys` with the authorized public key. You can do that via
 
 ```
 mkdir -p ~/.ssh

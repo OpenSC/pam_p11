@@ -88,7 +88,8 @@ err:
 #define PAM_EXTERN extern
 #endif
 
-extern int match_user(EVP_PKEY *authkey, const char *login);
+extern int match_user_opensc(EVP_PKEY *authkey, const char *login);
+extern int match_user_openssh(EVP_PKEY *authkey, const char *login);
 
 int prompt(int flags, pam_handle_t *pamh, int style, char **response,
 			    const char *fmt, ...)
@@ -208,7 +209,10 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		if (0 == PKCS11_enumerate_public_keys(slot->token, &keys, &count)) {
 			while (0 < count && NULL != keys) {
 				EVP_PKEY *pubkey = PKCS11_get_public_key(keys);
-				int r = match_user(pubkey, user);
+				int r = match_user_opensc(pubkey, user);
+				if (1 != r) {
+					r = match_user_openssh(pubkey, user);
+				}
 				if (NULL != pubkey) {
 					EVP_PKEY_free(pubkey);
 				}
@@ -229,7 +233,10 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &count)) {
 			while (0 < count && NULL != certs) {
 				EVP_PKEY *pubkey = X509_get_pubkey(certs->x509);
-				int r = match_user(pubkey, user);
+				int r = match_user_opensc(pubkey, user);
+				if (1 != r) {
+					r = match_user_openssh(pubkey, user);
+				}
 				if (NULL != pubkey) {
 					EVP_PKEY_free(pubkey);
 				}
