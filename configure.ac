@@ -105,7 +105,7 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([memset strdup strerror])
+AC_CHECK_FUNCS([memset strdup strerror PKCS11_enumerate_public_keys])
 
 CFLAGS="${saved_CFLAGS}"
 LIBS="$saved_LIBS"

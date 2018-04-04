@@ -189,7 +189,9 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 	while (0 < nslots) {
 		PKCS11_SLOT *slot = NULL;
 		PKCS11_CERT *certs = NULL;
+#ifdef HAVE_PKCS11_ENUMERATE_PUBLIC_KEYS
 		PKCS11_KEY *keys = NULL;
+#endif
 		unsigned int count = 0;
 
 		slot = PKCS11_find_token(ctx, slots, nslots);
@@ -206,6 +208,7 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		pam_syslog(pamh, LOG_DEBUG, "Searching %s for keys",
 				slot->token->label);
 
+#ifdef HAVE_PKCS11_ENUMERATE_PUBLIC_KEYS
 		if (0 == PKCS11_enumerate_public_keys(slot->token, &keys, &count)) {
 			while (0 < count && NULL != keys) {
 				EVP_PKEY *pubkey = PKCS11_get_public_key(keys);
@@ -229,6 +232,7 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 				count--;
 			}
 		}
+#endif
 
 		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &count)) {
 			while (0 < count && NULL != certs) {
