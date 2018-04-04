@@ -151,7 +151,7 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 		}
 	}
 
-	if (0 != PKCS11_login(slot, 0, password) != 0) {
+	if (0 != PKCS11_login(slot, 0, password)) {
 		if (slot->token->userPinLocked) {
 			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified; PIN locked");
 		} else if (slot->token->userPinFinalTry) {

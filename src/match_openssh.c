@@ -240,9 +240,6 @@ extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
 	struct passwd *pw;
 	int found;
 	FILE *file;
-	EVP_PKEY **keys = NULL;
-	const BIGNUM *rsa_e, *rsa_n, *auth_e, *auth_n;
-	int nkeys = 0, i;
 
 	pw = getpwnam(login);
 	if (!pw || !pw->pw_dir)
