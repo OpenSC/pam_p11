@@ -1,0 +1,18 @@
+language: c
+
+addons:
+  apt_packages:
+    - libp11-dev
+    - libssl-dev
+    - libpam0g-dev
+
+compiler:
+  - clang
+  - gcc
+
+before_script:
+  - ./bootstrap
+  - ./configure
+
+script:
+  - make distcheck

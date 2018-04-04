@@ -13,6 +13,8 @@ Pam_p11 is very simple, it has no config file, no options other than the PKCS#11
 
 Pam_p11 was written by an international team and is licensed as Open Source software under the LGPL license.
 
+[![Build Status](https://travis-ci.org/OpenSC/pam_p11.svg?branch=master)](https://travis-ci.org/OpenSC/pam_p11)
+
 ## Installing pam_p11
 
 Installation is quite easy:
