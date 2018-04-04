@@ -21,9 +21,9 @@ AC_C_BIGENDIAN
 
 AC_ARG_ENABLE(
 	[strict],
-	[AS_HELP_STRING([--enable-strict],[enable strict compile mode @<:@disabled@:>@])],
+	[AS_HELP_STRING([--disable-strict],[disable strict compile mode @<:@enabled@:>@])],
 	,
-	[enable_strict="no"]
+	[enable_strict="yes"]
 )
 
 AC_ARG_ENABLE(
@@ -117,7 +117,7 @@ if test "${enable_pedantic}" = "yes"; then
 	CFLAGS="${CFLAGS} -pedantic"
 fi
 if test "${enable_strict}" = "yes"; then
-	CFLAGS="${CFLAGS} -Wall -Wextra"
+	CFLAGS="${CFLAGS} -Wall -Wextra -Wno-unused-parameter -Werror"
 fi
 
 AC_CONFIG_FILES([
