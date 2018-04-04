@@ -18,15 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <assert.h>
-
-extern int sc_base64_decode(const char *in, unsigned char *out, size_t outlen);
-
-static const unsigned char base64_table[66] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" "0123456789+/=";
+extern int sc_base64_decode(const char *in, unsigned char *out, unsigned int outlen);
 
 static const unsigned char bin_table[128] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -47,22 +39,6 @@ static const unsigned char bin_table[128] = {
 	0x31, 0x32, 0x33, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 };
 
-#if 0
-static void to_base64(unsigned int i, unsigned char *out, unsigned int fillers)
-{
-	unsigned int s = 18, c;
-
-	for (c = 0; c < 4; c++) {
-		if (fillers >= 4 - c)
-			*out = base64_table[64];
-		else
-			*out = base64_table[(i >> s) & 0x3f];
-		out++;
-		s -= 6;
-	}
-}
-#endif
-
 static int from_base64(const char *in, unsigned int *out, int *skip)
 {
 	unsigned int res = 0, c, s = 18;
@@ -72,7 +48,7 @@ static int from_base64(const char *in, unsigned int *out, int *skip)
 		unsigned char b;
 		int k = *in;
 
-		if (k < 0)
+		if (k < 0 || k >= (int)sizeof(bin_table))
 			return -1;
 		if (k == 0 && c == 0)
 			return 0;
@@ -95,62 +71,7 @@ static int from_base64(const char *in, unsigned int *out, int *skip)
 	return c * 6 / 8;
 }
 
-#if 0
-int sc_base64_encode(const unsigned char *in, size_t len, unsigned char *out,
-		     size_t outlen, size_t linelength)
-{
-	unsigned int chars = 0;
-	size_t i, c;
-
-	linelength -= linelength & 0x03;
-	if (linelength < 0)
-		return -1;
-	while (len >= 3) {
-		i = in[2] + (in[1] << 8) + (in[0] << 16);
-		in += 3;
-		len -= 3;
-		if (outlen < 4)
-			return -1;
-		to_base64(i, out, 0);
-		out += 4;
-		outlen -= 4;
-		chars += 4;
-		if (chars >= linelength && linelength > 0) {
-			if (outlen < 1)
-				return -1;
-			*out = '\n';
-			out++;
-			outlen--;
-			chars = 0;
-		}
-	}
-	i = c = 0;
-	while (c < len)
-		i |= *in++ << ((2 - c++) << 3);
-	if (len) {
-		if (outlen < 4)
-			return -1;
-		to_base64(i, out, 3 - len);
-		out += 4;
-		outlen -= 4;
-		chars += 4;
-	}
-	if (chars && linelength > 0) {
-		if (outlen < 1)
-			return -1;
-		*out = '\n';
-		out++;
-		outlen--;
-	}
-	if (outlen < 1)
-		return -1;
-	*out = 0;
-
-	return 0;
-}
-#endif
-
-int sc_base64_decode(const char *in, unsigned char *out, size_t outlen)
+int sc_base64_decode(const char *in, unsigned char *out, unsigned int outlen)
 {
 	int len = 0, r, skip;
 	unsigned int i;

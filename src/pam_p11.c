@@ -275,7 +275,7 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 	return 0;
 }
 
-static int randomize(pam_handle_t *pamh, unsigned char *r, size_t r_len)
+static int randomize(pam_handle_t *pamh, unsigned char *r, unsigned int r_len)
 {
 	int ok = 0;
 	int fd = open("/dev/urandom", O_RDONLY);
