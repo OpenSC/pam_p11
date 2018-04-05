@@ -48,7 +48,7 @@ AC_ARG_WITH(
 )
 
 AM_GNU_GETTEXT([external])
-AM_GNU_GETTEXT_VERSION(0.19.8)
+AM_GNU_GETTEXT_VERSION(0.18.3)
 
 dnl Add the languages which your application supports here.
 ALL_LINGUAS="de"

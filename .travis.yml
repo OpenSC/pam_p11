@@ -5,6 +5,7 @@ addons:
     - libp11-dev
     - libssl-dev
     - libpam0g-dev
+    - autopoint
 
 compiler:
   - clang
