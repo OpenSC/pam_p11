@@ -100,5 +100,6 @@ po/quot.sed
 po/remove-potcdate.sin
 po/POTFILES
 po/stamp-po
+po/remove-potcdate.sed
 *.gmo
 *.mo

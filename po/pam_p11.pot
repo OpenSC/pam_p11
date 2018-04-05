@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenSC/OpenSC/issues\n"
-"POT-Creation-Date: 2018-04-05 10:57+0200\n"
+"POT-Creation-Date: 2018-04-05 14:33+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,48 +17,48 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/pam_p11.c:137
+#: src/pam_p11.c:148
 msgid " (last try)"
 msgstr ""
 
-#: src/pam_p11.c:378
-msgid "Error initializing PKCS#11 module"
-msgstr ""
-
-#: src/pam_p11.c:370
-msgid "Error loading PKCS#11 module"
-msgstr ""
-
-#: src/pam_p11.c:327
-msgid "Error verifying key"
-msgstr ""
-
-#: src/pam_p11.c:144
+#: src/pam_p11.c:155
 #, c-format
 msgid "Login on PIN pad with %s%s"
 msgstr ""
 
-#: src/pam_p11.c:150
+#: src/pam_p11.c:161
 #, c-format
 msgid "Login with %s%s: "
 msgstr ""
 
-#: src/pam_p11.c:279
-msgid "No authorized keys on token"
-msgstr ""
-
-#: src/pam_p11.c:277
-msgid "No token found"
-msgstr ""
-
-#: src/pam_p11.c:163
-msgid "PIN not verified"
-msgstr ""
-
-#: src/pam_p11.c:159
+#: src/pam_p11.c:170
 msgid "PIN not verified; PIN locked"
 msgstr ""
 
-#: src/pam_p11.c:161
+#: src/pam_p11.c:172
 msgid "PIN not verified; one try remaining"
+msgstr ""
+
+#: src/pam_p11.c:174
+msgid "PIN not verified"
+msgstr ""
+
+#: src/pam_p11.c:288
+msgid "No token found"
+msgstr ""
+
+#: src/pam_p11.c:290
+msgid "No authorized keys on token"
+msgstr ""
+
+#: src/pam_p11.c:338
+msgid "Error verifying key"
+msgstr ""
+
+#: src/pam_p11.c:387
+msgid "Error loading PKCS#11 module"
+msgstr ""
+
+#: src/pam_p11.c:395
+msgid "Error initializing PKCS#11 module"
 msgstr ""
