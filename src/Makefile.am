@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = $(srcdir)/Makefile.in
 
-AM_CFLAGS = $(OPENSSL_CFLAGS) $(LIBP11_CFLAGS) $(PAM_CFLAGS)
+AM_CFLAGS = $(OPENSSL_CFLAGS) $(LIBP11_CFLAGS) $(PAM_CFLAGS) -DLOCALEDIR=\"$(localedir)\"
 LIBS = $(OPENSSL_LIBS) $(LIBP11_LIBS) $(PAM_LIBS)
 AM_LDFLAGS = -module -avoid-version -shared -no-undefined \
 	-export-symbols "$(srcdir)/pam_p11.exports"

@@ -5,8 +5,9 @@ define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [1])
 define([PACKAGE_VERSION_FIX], [7])
 define([PACKAGE_SUFFIX], [_git])
+define([PRODUCT_BUGREPORT], [https://github.com/OpenSC/OpenSC/issues])
 
-AC_INIT([pam_p11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX[]PACKAGE_SUFFIX])
+AC_INIT([pam_p11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX[]PACKAGE_SUFFIX],[PRODUCT_BUGREPORT])
 AC_CONFIG_AUX_DIR([.])
 AM_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -45,6 +46,12 @@ AC_ARG_WITH(
 		fi
 	]
 )
+
+AM_GNU_GETTEXT([external])
+AM_GNU_GETTEXT_VERSION(0.19.8)
+
+dnl Add the languages which your application supports here.
+ALL_LINGUAS="de"
 
 dnl Checks for programs.
 AC_PROG_CPP
@@ -123,6 +130,7 @@ fi
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
+	po/Makefile.in
 ])
 AC_OUTPUT
 

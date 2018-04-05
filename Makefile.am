@@ -13,9 +13,9 @@ MAINTAINERCLEANFILES = \
 	$(srcdir)/m4/ltversion.m4 $(srcdir)/m4/lt~obsolete.m4 \
 	$(srcdir)/m4/ltoptions.m4 \
 	$(srcdir)/packaged
-EXTRA_DIST = .gitignore
+EXTRA_DIST = ./config.rpath .gitignore
 
-SUBDIRS = src
+SUBDIRS = po src
 
 dist_noinst_SCRIPTS = bootstrap
 dist_doc_DATA = NEWS

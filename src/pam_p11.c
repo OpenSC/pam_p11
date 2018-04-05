@@ -16,6 +16,10 @@
 #include "config.h"
 #endif
 
+#ifndef PACKAGE
+#define PACKAGE "pam_p11"
+#endif
+
 #include <syslog.h>
 #include <ctype.h>
 #include <string.h>
@@ -25,8 +29,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <openssl/crypto.h>
-
 #include <libp11.h>
+
+#ifdef ENABLE_NLS
+#include <libintl.h>
+#include <locale.h>
+#define _(string) gettext(string)
+#ifndef LOCALEDIR
+#define LOCALEDIR "/usr/share/locale"
+#endif
+#else
+#define _(string) string
+#endif
 
 /* We have to make this definitions before we include the pam header files! */
 #define PAM_SM_AUTH
@@ -131,20 +145,20 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 		const char *pin_info;
 
 		if (slot->token->userPinFinalTry) {
-			pin_info = " (last try)";
+			pin_info = _(" (last try)");
 		} else {
 			pin_info = "";
 		}
 
 		if (0 != slot->token->secureLogin) {
 			prompt(flags, pamh, PAM_TEXT_INFO, NULL,
-					"Login on PIN pad with %s%s",
+					_("Login on PIN pad with %s%s"),
 					slot->token->label, pin_info);
 		} else {
 			/* ask the user for the password if variable text is set */
 			if (PAM_SUCCESS != prompt(flags, pamh,
 						PAM_PROMPT_ECHO_OFF, &password,
-						"Login with %s%s: ",
+						_("Login with %s%s: "),
 						slot->token->label, pin_info)) {
 				goto err;
 			}
@@ -153,11 +167,11 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 
 	if (0 != PKCS11_login(slot, 0, password)) {
 		if (slot->token->userPinLocked) {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified; PIN locked");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not verified; PIN locked"));
 		} else if (slot->token->userPinFinalTry) {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified; one try remaining");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not verified; one try remaining"));
 		} else {
-			prompt(flags, pamh, PAM_ERROR_MSG, NULL, "PIN not verified");
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not verified"));
 		}
 		goto err;
 	}
@@ -271,9 +285,9 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 	}
 
 	if (0 == token_found) {
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No token found");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("No token found"));
 	} else {
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "No authorized keys on token");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("No authorized keys on token"));
 	}
 
 	return 0;
@@ -321,7 +335,7 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 		ERR_load_crypto_strings();
 		pam_syslog(pamh, LOG_DEBUG, "Error verifying key: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
-		prompt(flags, pamh, PAM_ERROR_MSG, NULL, "Error verifying key");
+		prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("Error verifying key"));
 		goto err;
 	}
 	ok = 1;
@@ -355,6 +369,12 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		return PAM_USER_UNKNOWN;
 	}
 
+#ifdef ENABLE_NLS
+	setlocale(LC_ALL, "");
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	textdomain(PACKAGE);
+#endif
+
 	/* Initialize OpenSSL */
 	OpenSSL_add_all_algorithms();
 
@@ -364,7 +384,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		ERR_load_crypto_strings();
 		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "Error loading PKCS#11 module");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error loading PKCS#11 module"));
 		r = PAM_NO_MODULE_DATA;
 		goto err_not_loaded;
 	}
@@ -372,7 +392,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		ERR_load_crypto_strings();
 		pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, "Error initializing PKCS#11 module");
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error initializing PKCS#11 module"));
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
@@ -445,7 +465,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 #ifdef PAM_STATIC
 /* static module data */
 struct pam_module _pam_group_modstruct = {
-	"pam_p11",
+	PACKAGE,
 	pam_sm_authenticate,
 	pam_sm_setcred,
 	pam_sm_acct_mgmt,
