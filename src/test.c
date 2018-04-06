@@ -57,6 +57,10 @@ int main(int argc, const char **argv)
 	if (PAM_SUCCESS != r)
 		goto pam_err;
 
+	r = pam_sm_acct_mgmt(pamh, 0, sizeof pam_argv/sizeof *pam_argv, pam_argv);
+	if (PAM_SUCCESS != r)
+		goto pam_err;
+
 	status = EXIT_SUCCESS;
 
 pam_err:

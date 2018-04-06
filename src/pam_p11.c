@@ -433,9 +433,10 @@ PAM_EXTERN int pam_sm_setcred(pam_handle_t * pamh, int flags, int argc,
 PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 				const char **argv)
 {
-	pam_syslog(pamh, LOG_DEBUG,
-	       "Function pam_sm_acct_mgmt() is not implemented in this module");
-	return PAM_SERVICE_ERR;
+	/* if the user has been authenticated (precondition of this call), then
+	 * everything is OK. Yes, we explicitly don't want to check CRLs, OCSP or
+	 * exparation of certificates (use pam_pkcs11 for this). */
+	return PAM_SUCCESS;
 }
 
 PAM_EXTERN int pam_sm_open_session(pam_handle_t * pamh, int flags, int argc,
