@@ -125,12 +125,15 @@ int prompt(int flags, pam_handle_t *pamh, int style, char **response,
 static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 {
 	char *password = NULL;
-	int ok = 0;
+	int ok;
 
-	if (0 == slot->token->loginRequired) {
+	if (0 == slot->token->loginRequired
+			|| (0 == PKCS11_is_logged_in(slot, 0, &ok)
+				&& ok == 1)) {
 		ok = 1;
 		goto err;
 	}
+	ok = 0;
 
 	/* try to get stored item */
 	if (PAM_SUCCESS == pam_get_item(pamh, PAM_AUTHTOK, (void *)&password)
