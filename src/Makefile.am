@@ -11,11 +11,15 @@ pam_p11_la_SOURCES = pam_p11.c base64.c \
 	match_openssh.c match_opensc.c \
 	pam_p11.exports
 
-noinst_PROGRAMS = test_pam_p11
+noinst_PROGRAMS = test-login test-passwd
 
-test_pam_p11_SOURCES = test.c $(pam_p11_la_SOURCES)
-test_pam_p11_LDADD   = -lpam_misc
-test_pam_p11_CFLAGS  = $(AM_CFLAGS) -DLIBDIR=\"$(libdir)\"
+test_login_SOURCES = test.c login.c $(pam_p11_la_SOURCES)
+test_login_LDADD   = -lpam_misc
+test_login_CFLAGS  = $(AM_CFLAGS) -DLIBDIR=\"$(libdir)\"
+
+test_passwd_SOURCES = test.c passwd.c $(pam_p11_la_SOURCES)
+test_passwd_LDADD   = -lpam_misc
+test_passwd_CFLAGS  = $(AM_CFLAGS) -DLIBDIR=\"$(libdir)\"
 
 format:
 	indent -kr -i8 -ts8 -sob -l80 -ss -ncs *.c *.h
