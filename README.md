@@ -41,7 +41,7 @@ auth       required     pam_unix.so nullok
 with
 
 ```
-auth       required     pam_p11.so /usr/lib/opensc-pkcs11.so
+auth       required     pam_p11.so  /usr/lib/opensc-pkcs11.so
 ```
 
 Replace `/usr/lib/opensc-pkcs11.so` with your PKCS#11 implementation.
@@ -49,8 +49,20 @@ Replace `/usr/lib/opensc-pkcs11.so` with your PKCS#11 implementation.
 Also while testing it is best to keep a door open, i.e. allow also login via passwords. To try pam_p11 first and then password put into your pam configuration:
 
 ```
-auth       sufficient   pam_p11.so /usr/lib/opensc-pkcs11.so
+auth       sufficient   pam_p11.so  /usr/lib/opensc-pkcs11.so
 auth       required     pam_unix.so nullok
+```
+
+To allow changing and unblocking the PIN via pam_p11, replace
+
+```
+password   required     pam_unix.so use_authtok nullok sha512
+```
+
+with
+```
+password   optional     pam_p11.so  /usr/lib/opensc-pkcs11.so
+password   required     pam_unix.so use_authtok nullok sha512
 ```
 
 ### User configuration via `~/.eid/authorized_certificates`

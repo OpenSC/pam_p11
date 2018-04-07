@@ -38,8 +38,13 @@
 #ifndef LOCALEDIR
 #define LOCALEDIR "/usr/share/locale"
 #endif
+#define NLS_INITIALIZE \
+	setlocale(LC_ALL, ""); \
+	bindtextdomain(PACKAGE, LOCALEDIR); \
+	textdomain(PACKAGE);
 #else
 #define _(string) string
+#define NLS_INITIALIZE
 #endif
 
 /* We have to make this definitions before we include the pam header files! */
@@ -101,6 +106,45 @@ err:
 #ifndef PAM_EXTERN
 #define PAM_EXTERN extern
 #endif
+
+#define MODULE_INITIALIZE \
+	const char *user; \
+	int r; \
+	unsigned int nslots = 0; \
+	PKCS11_CTX *ctx = NULL; \
+	PKCS11_SLOT *authslot = NULL, *slots = NULL; \
+ \
+	/* get user name */ \
+	r = pam_get_user(pamh, &user, NULL); \
+	if (PAM_SUCCESS != r) { \
+		pam_syslog(pamh, LOG_ERR, "pam_get_user() failed %s", \
+		       pam_strerror(pamh, r)); \
+		return PAM_USER_UNKNOWN; \
+	} \
+ \
+	NLS_INITIALIZE; \
+ \
+	/* Initialize OpenSSL */ \
+	OpenSSL_add_all_algorithms(); \
+ \
+	/* Load and initialize PKCS#11 module */ \
+	ctx = PKCS11_CTX_new(); \
+	if (1 != argc || NULL == ctx || 0 != PKCS11_CTX_load(ctx, argv[0])) { \
+		ERR_load_crypto_strings(); \
+		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n", \
+				ERR_reason_error_string(ERR_get_error())); \
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error loading PKCS#11 module")); \
+		r = PAM_NO_MODULE_DATA; \
+		goto err_not_loaded; \
+	} \
+	if (0 != PKCS11_enumerate_slots(ctx, &slots, &nslots)) { \
+		ERR_load_crypto_strings(); \
+		pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n", \
+				ERR_reason_error_string(ERR_get_error())); \
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error initializing PKCS#11 module")); \
+		r = PAM_AUTHINFO_UNAVAIL; \
+		goto err; \
+	}
 
 extern int match_user_opensc(EVP_PKEY *authkey, const char *login);
 extern int match_user_openssh(EVP_PKEY *authkey, const char *login);
@@ -179,12 +223,122 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 		goto err;
 	}
 
+	pam_set_item(pamh, PAM_AUTHTOK, password);
+
 	ok = 1;
 
 err:
 	if (NULL != password) {
 		OPENSSL_cleanse(password, strlen(password));
 		free(password);
+	}
+
+	return ok;
+}
+
+static int key_change_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
+{
+	char *old = NULL, *new = NULL, *retyped = NULL;
+	int ok;
+
+	if (0 == slot->token->loginRequired) {
+		/* we can't change a PIN */
+		ok = 0;
+		goto err;
+	}
+	ok = 0;
+
+	/* We need a R/W public session to change the PIN via PUK or
+	 * a R/W user session to change the PIN via PIN */
+	if (0 != PKCS11_open_session(slot, 1)
+			|| (0 == slot->token->userPinLocked
+				&& 1 != key_login(pamh, flags, slot))) {
+		goto err;
+	}
+
+	/* prompt for new PIN (and PUK if needed) */
+	if (0 != slot->token->secureLogin) {
+		if (0 != slot->token->userPinLocked) {
+			prompt(flags, pamh, PAM_TEXT_INFO, NULL,
+					_("Change PIN with PUK on PIN pad for %s"),
+					slot->token->label);
+		} else {
+			prompt(flags, pamh, PAM_TEXT_INFO, NULL,
+					_("Change PIN on PIN pad for %s"),
+					slot->token->label);
+		}
+	} else {
+		if (0 != slot->token->userPinLocked) {
+			if (PAM_SUCCESS == prompt(flags, pamh,
+						PAM_PROMPT_ECHO_OFF, &old,
+						_("PUK for %s: "),
+						slot->token->label)) {
+				goto err;
+			}
+		} else {
+#ifdef TEST
+			/* In the tests we're calling pam_sm_chauthtok() directly, so
+			 * pam_get_item(PAM_AUTHTOK) will return PAM_BAD_ITEM. As
+			 * workaround, we simply enter the current PIN twice. */
+			if (PAM_SUCCESS != prompt(flags, pamh,
+						PAM_PROMPT_ECHO_OFF, &old,
+						_("Current PIN: "))) {
+				goto err;
+			}
+#else
+			if (PAM_SUCCESS != pam_get_item(pamh, PAM_AUTHTOK, (void *)&old)
+					|| NULL == old) {
+				goto err;
+			}
+			old = strdup(old);
+			if (NULL == old) {
+				pam_syslog(pamh, LOG_CRIT, "strdup() failed: %s",
+						strerror(errno));
+				goto err;
+			}
+#endif
+		}
+		if (PAM_SUCCESS != prompt(flags, pamh,
+					PAM_PROMPT_ECHO_OFF, &new,
+					_("Enter new PIN: "))
+				|| PAM_SUCCESS != prompt(flags, pamh,
+					PAM_PROMPT_ECHO_OFF, &retyped,
+					_("Retype new PIN: "))) {
+			goto err;
+		}
+		if (0 != strcmp(new, retyped)) {
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PINs don't match"));
+			goto err;
+		}
+	}
+
+	if (0 != PKCS11_change_pin(slot, old, new)) {
+		if (slot->token->userPinLocked) {
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not changed; PIN locked"));
+		} else if (slot->token->userPinFinalTry) {
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not changed; one try remaining"));
+		} else {
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not changed"));
+		}
+		goto err;
+	}
+
+	pam_set_item(pamh, PAM_AUTHTOK, new);
+
+	ok = 1;
+
+err:
+	if (NULL != retyped) {
+		OPENSSL_cleanse(old, strlen(retyped));
+		free(retyped);
+	}
+	if (NULL != new) {
+		OPENSSL_cleanse(new, strlen(new));
+		free(new);
+	}
+	if (NULL != old) {
+		OPENSSL_cleanse(old, strlen(old));
+		free(old);
 	}
 
 	return ok;
@@ -203,6 +357,7 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 	*authkey = NULL;
 	*authslot = NULL;
 
+	/* search all valuable slots for a key that is authorized by the user */
 	while (0 < nslots) {
 		PKCS11_SLOT *slot = NULL;
 		PKCS11_CERT *certs = NULL;
@@ -226,6 +381,8 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 				slot->token->label);
 
 #ifdef HAVE_PKCS11_ENUMERATE_PUBLIC_KEYS
+		/* First, search all available public keys to allow using tokens
+		 * without certificates (e.g. OpenPGP card) */
 		if (0 == PKCS11_enumerate_public_keys(slot->token, &keys, &count)) {
 			while (0 < count && NULL != keys) {
 				EVP_PKEY *pubkey = PKCS11_get_public_key(keys);
@@ -251,6 +408,7 @@ static int key_find(pam_handle_t * pamh, int flags, const char *user,
 		}
 #endif
 
+		/* Next, search all certificates */
 		if (0 == PKCS11_enumerate_certs(slot->token, &certs, &count)) {
 			while (0 < count && NULL != certs) {
 				EVP_PKEY *pubkey = X509_get_pubkey(certs->x509);
@@ -323,7 +481,13 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 	EVP_PKEY *privkey = PKCS11_get_private_key(authkey);
 	EVP_PKEY *pubkey = PKCS11_get_public_key(authkey);
 
-	/* verify a sha1 hash of the random data, signed by the key */
+	/* Verify a SHA-1 hash of random data, signed by the key.
+	 *
+	 * Note that this will not work keys that aren't eligible for signing.
+	 * Unfortunately, libp11 currently has no way of checking
+	 * C_GetAttributeValue(CKA_SIGN), see
+	 * https://github.com/OpenSC/libp11/issues/219. Since we don't want to
+	 * implement try and error, we live with this limitation */
 	if (1 != randomize(pamh, challenge, sizeof challenge)) {
 		goto err;
 	}
@@ -357,48 +521,8 @@ err:
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 				   const char **argv)
 {
-	const char *user;
-	int r;
-	unsigned int nslots = 0;
-	PKCS11_CTX *ctx = NULL;
-	PKCS11_SLOT *authslot = NULL, *slots = NULL;
 	PKCS11_KEY *authkey;
-
-	/* get user name */
-	r = pam_get_user(pamh, &user, NULL);
-	if (PAM_SUCCESS != r) {
-		pam_syslog(pamh, LOG_ERR, "pam_get_user() failed %s",
-		       pam_strerror(pamh, r));
-		return PAM_USER_UNKNOWN;
-	}
-
-#ifdef ENABLE_NLS
-	setlocale(LC_ALL, "");
-	bindtextdomain(PACKAGE, LOCALEDIR);
-	textdomain(PACKAGE);
-#endif
-
-	/* Initialize OpenSSL */
-	OpenSSL_add_all_algorithms();
-
-	/* Load and initialize PKCS#11 module */
-	ctx = PKCS11_CTX_new();
-	if (1 != argc || NULL == ctx || 0 != PKCS11_CTX_load(ctx, argv[0])) {
-		ERR_load_crypto_strings();
-		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n",
-				ERR_reason_error_string(ERR_get_error()));
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error loading PKCS#11 module"));
-		r = PAM_NO_MODULE_DATA;
-		goto err_not_loaded;
-	}
-	if (0 != PKCS11_enumerate_slots(ctx, &slots, &nslots)) {
-		ERR_load_crypto_strings();
-		pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n",
-				ERR_reason_error_string(ERR_get_error()));
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error initializing PKCS#11 module"));
-		r = PAM_AUTHINFO_UNAVAIL;
-		goto err;
-	}
+	MODULE_INITIALIZE;
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
 				&authslot, &authkey)) {
@@ -461,9 +585,47 @@ PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh, int flags, int argc,
 PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 				const char **argv)
 {
-	pam_syslog(pamh, LOG_DEBUG,
-	       "Function pam_sm_chauthtok() is not implemented in this module");
-	return PAM_SERVICE_ERR;
+	PKCS11_KEY *authkey;
+	MODULE_INITIALIZE;
+
+	if (flags & PAM_CHANGE_EXPIRED_AUTHTOK) {
+		/* Yes, we explicitly don't want to check CRLs, OCSP or exparation of
+		 * certificates (use pam_pkcs11 for this). */
+		r = PAM_SUCCESS;
+		goto err;
+	}
+
+	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
+				&authslot, &authkey)) {
+		r = PAM_AUTHINFO_UNAVAIL;
+		goto err;
+	}
+
+	if (flags & PAM_PRELIM_CHECK) {
+		r = PAM_TRY_AGAIN;
+		goto err;
+	}
+
+	if (flags & PAM_UPDATE_AUTHTOK) {
+		if (1 != key_change_login(pamh, flags, authslot)) {
+			if (authslot->token->userPinLocked) {
+				r = PAM_MAXTRIES;
+			} else {
+				r = PAM_AUTH_ERR;
+			}
+			goto err;
+		}
+	}
+
+	r = PAM_SUCCESS;
+
+err:
+	PKCS11_release_all_slots(ctx, slots, nslots);
+	PKCS11_CTX_unload(ctx);
+err_not_loaded:
+	PKCS11_CTX_free(ctx);
+
+	return r;
 }
 
 #ifdef PAM_STATIC
