@@ -38,13 +38,8 @@
 #ifndef LOCALEDIR
 #define LOCALEDIR "/usr/share/locale"
 #endif
-#define NLS_INITIALIZE \
-	setlocale(LC_ALL, ""); \
-	bindtextdomain(PACKAGE, LOCALEDIR); \
-	textdomain(PACKAGE);
 #else
 #define _(string) string
-#define NLS_INITIALIZE
 #endif
 
 /* We have to make this definitions before we include the pam header files! */
@@ -75,9 +70,9 @@ static int pam_vprompt(pam_handle_t *pamh, int style, char **response,
 	msg.msg = text;
 
 	if (PAM_SUCCESS != pam_get_item(pamh, PAM_CONV, (const void **) &conv)
-		|| NULL == conv || NULL == conv->conv
-		|| conv->conv(1, (const struct pam_message **) msgp, &resp, conv->appdata_ptr)
-		|| NULL == resp) {
+			|| NULL == conv || NULL == conv->conv
+			|| conv->conv(1, (const struct pam_message **) msgp, &resp, conv->appdata_ptr)
+			|| NULL == resp) {
 		goto err;
 	}
 	if (NULL != response) {
@@ -107,50 +102,8 @@ err:
 #define PAM_EXTERN extern
 #endif
 
-#define MODULE_INITIALIZE \
-	const char *user; \
-	int r; \
-	unsigned int nslots = 0; \
-	PKCS11_CTX *ctx = NULL; \
-	PKCS11_SLOT *authslot = NULL, *slots = NULL; \
- \
-	/* get user name */ \
-	r = pam_get_user(pamh, &user, NULL); \
-	if (PAM_SUCCESS != r) { \
-		pam_syslog(pamh, LOG_ERR, "pam_get_user() failed %s", \
-		       pam_strerror(pamh, r)); \
-		return PAM_USER_UNKNOWN; \
-	} \
- \
-	NLS_INITIALIZE; \
- \
-	/* Initialize OpenSSL */ \
-	OpenSSL_add_all_algorithms(); \
- \
-	/* Load and initialize PKCS#11 module */ \
-	ctx = PKCS11_CTX_new(); \
-	if (1 != argc || NULL == ctx || 0 != PKCS11_CTX_load(ctx, argv[0])) { \
-		ERR_load_crypto_strings(); \
-		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n", \
-				ERR_reason_error_string(ERR_get_error())); \
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error loading PKCS#11 module")); \
-		r = PAM_NO_MODULE_DATA; \
-		goto err_not_loaded; \
-	} \
-	if (0 != PKCS11_enumerate_slots(ctx, &slots, &nslots)) { \
-		ERR_load_crypto_strings(); \
-		pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n", \
-				ERR_reason_error_string(ERR_get_error())); \
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error initializing PKCS#11 module")); \
-		r = PAM_AUTHINFO_UNAVAIL; \
-		goto err; \
-	}
-
-extern int match_user_opensc(EVP_PKEY *authkey, const char *login);
-extern int match_user_openssh(EVP_PKEY *authkey, const char *login);
-
 int prompt(int flags, pam_handle_t *pamh, int style, char **response,
-			    const char *fmt, ...)
+		const char *fmt, ...)
 {
 	int r;
 
@@ -166,6 +119,139 @@ int prompt(int flags, pam_handle_t *pamh, int style, char **response,
 	return r;
 }
 
+struct module_data {
+	PKCS11_CTX *ctx;
+	PKCS11_SLOT *slots;
+	unsigned int nslots;
+	int module_loaded;
+};
+
+#ifdef TEST
+static struct module_data *global_module_data = NULL;
+#endif
+
+void module_data_cleanup(pam_handle_t *pamh, void *data, int error_status)
+{
+	struct module_data *module_data = data;
+	if (module_data) {
+		if (1 == module_data->module_loaded) {
+			PKCS11_release_all_slots(module_data->ctx, module_data->slots, module_data->nslots);
+			PKCS11_CTX_unload(module_data->ctx);
+		}
+		PKCS11_CTX_free(module_data->ctx);
+	}
+}
+
+static int module_initialize(pam_handle_t * pamh,
+		int flags, int argc, const char **argv,
+		struct module_data **module_data)
+{
+	int r;
+	struct module_data *data = calloc(1, sizeof *data);
+	if (NULL == data) {
+		pam_syslog(pamh, LOG_CRIT, "calloc() failed: %s",
+				strerror(errno));
+		r = PAM_BUF_ERR;
+		goto err;
+	}
+
+#ifdef ENABLE_NLS
+	setlocale(LC_ALL, "");
+	bindtextdomain(PACKAGE, LOCALEDIR);
+	textdomain(PACKAGE);
+#endif
+
+	/* Initialize OpenSSL */
+	OpenSSL_add_all_algorithms();
+	ERR_load_crypto_strings();
+
+	/* Load and initialize PKCS#11 module */
+	data->ctx = PKCS11_CTX_new();
+	if (1 != argc || NULL == data->ctx
+			|| 0 != PKCS11_CTX_load(data->ctx, argv[0])) {
+		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n",
+				ERR_reason_error_string(ERR_get_error()));
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error loading PKCS#11 module"));
+		r = PAM_NO_MODULE_DATA;
+		goto err;
+	}
+	data->module_loaded = 1;
+	if (0 != PKCS11_enumerate_slots(data->ctx, &data->slots, &data->nslots)) {
+		pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n",
+				ERR_reason_error_string(ERR_get_error()));
+		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error initializing PKCS#11 module"));
+		r = PAM_AUTHINFO_UNAVAIL;
+		goto err;
+	}
+
+#ifdef TEST
+	/* pam_set_data() is reserved for actual modules. For testing this would
+	 * return PAM_SYSTEM_ERR, so we're saving the module data in a static
+	 * variable. */
+	r = PAM_SUCCESS;
+	global_module_data = data;
+#else
+	r = pam_set_data(pamh, PACKAGE, data, module_data_cleanup);
+	if (PAM_SUCCESS != r) {
+		goto err;
+	}
+#endif
+
+	*module_data = data;
+	data = NULL;
+
+err:
+	module_data_cleanup(pamh, data, r);
+
+	return r;
+}
+
+static int module_refresh(pam_handle_t *pamh,
+		int flags, int argc, const char **argv,
+		const char **user, PKCS11_CTX **ctx,
+		PKCS11_SLOT **slots, unsigned int *nslots)
+{
+	int r;
+	struct module_data *module_data;
+
+	if (PAM_SUCCESS != pam_get_data(pamh, PACKAGE, (void *)&module_data)
+			|| NULL == module_data) {
+		r = module_initialize(pamh, flags, argc, argv, &module_data);
+	} else {
+		/* refresh all known slots */
+		PKCS11_release_all_slots(module_data->ctx,
+				module_data->slots, module_data->nslots);
+		module_data->slots = NULL;
+		module_data->nslots = 0;
+		if (0 != PKCS11_enumerate_slots(module_data->ctx,
+					&module_data->slots, &module_data->nslots)) {
+			pam_syslog(pamh, LOG_ALERT, "Initializing PKCS#11 engine failed: %s\n",
+					ERR_reason_error_string(ERR_get_error()));
+			prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("Error initializing PKCS#11 module"));
+			r = PAM_AUTHINFO_UNAVAIL;
+			goto err;
+		}
+	}
+
+	r = pam_get_user(pamh, user, NULL);
+	if (PAM_SUCCESS != r) {
+		pam_syslog(pamh, LOG_ERR, "pam_get_user() failed %s",
+				pam_strerror(pamh, r));
+		r = PAM_USER_UNKNOWN;
+		goto err;
+	}
+
+	*ctx = module_data->ctx;
+	*nslots = module_data->nslots;
+	*slots = module_data->slots;
+
+err:
+	return r;
+}
+
+extern int match_user_opensc(EVP_PKEY *authkey, const char *login);
+extern int match_user_openssh(EVP_PKEY *authkey, const char *login);
+
 static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 {
 	char *password = NULL;
@@ -176,7 +262,7 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 			|| (0 == PKCS11_is_logged_in(slot, 0, &ok)
 				&& ok == 1)
 #endif
-			) {
+	   ) {
 		ok = 1;
 		goto err;
 	}
@@ -347,7 +433,7 @@ err:
 	return ok;
 }
 
-static int key_find(pam_handle_t * pamh, int flags, const char *user,
+static int key_find(pam_handle_t *pamh, int flags, const char *user,
 		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
 		PKCS11_SLOT **authslot, PKCS11_KEY **authkey)
 {
@@ -502,7 +588,6 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 			|| !EVP_VerifyInit(md_ctx, md)
 			|| !EVP_VerifyUpdate(md_ctx, challenge, sizeof challenge)
 			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
-		ERR_load_crypto_strings();
 		pam_syslog(pamh, LOG_DEBUG, "Error verifying key: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
 		prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("Error verifying key"));
@@ -522,10 +607,20 @@ err:
 }
 
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
-				   const char **argv)
+		const char **argv)
 {
+	int r;
+	PKCS11_CTX *ctx;
+	unsigned int nslots;
 	PKCS11_KEY *authkey;
-	MODULE_INITIALIZE;
+	PKCS11_SLOT *slots, *authslot;
+	const char *user;
+
+	r = module_refresh(pamh, flags, argc, argv,
+			&user, &ctx, &slots, &nslots);
+	if (PAM_SUCCESS != r) {
+		goto err;
+	}
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
 				&authslot, &authkey)) {
@@ -545,23 +640,21 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	r = PAM_SUCCESS;
 
 err:
-	PKCS11_release_all_slots(ctx, slots, nslots);
-	PKCS11_CTX_unload(ctx);
-err_not_loaded:
-	PKCS11_CTX_free(ctx);
-
+#ifdef TEST
+	module_data_cleanup(pamh, global_module_data, r);
+#endif
 	return r;
 }
 
 PAM_EXTERN int pam_sm_setcred(pam_handle_t * pamh, int flags, int argc,
-			      const char **argv)
+		const char **argv)
 {
 	/* Actually, we should return the same value as pam_sm_authenticate(). */
 	return PAM_SUCCESS;
 }
 
 PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
-				const char **argv)
+		const char **argv)
 {
 	/* if the user has been authenticated (precondition of this call), then
 	 * everything is OK. Yes, we explicitly don't want to check CRLs, OCSP or
@@ -570,26 +663,36 @@ PAM_EXTERN int pam_sm_acct_mgmt(pam_handle_t * pamh, int flags, int argc,
 }
 
 PAM_EXTERN int pam_sm_open_session(pam_handle_t * pamh, int flags, int argc,
-				   const char **argv)
+		const char **argv)
 {
 	pam_syslog(pamh, LOG_DEBUG,
-	       "Function pam_sm_open_session() is not implemented in this module");
+			"Function pam_sm_open_session() is not implemented in this module");
 	return PAM_SERVICE_ERR;
 }
 
 PAM_EXTERN int pam_sm_close_session(pam_handle_t * pamh, int flags, int argc,
-				    const char **argv)
+		const char **argv)
 {
 	pam_syslog(pamh, LOG_DEBUG,
-	       "Function pam_sm_close_session() is not implemented in this module");
+			"Function pam_sm_close_session() is not implemented in this module");
 	return PAM_SERVICE_ERR;
 }
 
 PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
-				const char **argv)
+		const char **argv)
 {
+	int r;
+	PKCS11_CTX *ctx;
+	unsigned int nslots;
 	PKCS11_KEY *authkey;
-	MODULE_INITIALIZE;
+	PKCS11_SLOT *slots, *authslot;
+	const char *user;
+
+	r = module_refresh(pamh, flags, argc, argv,
+			&user, &ctx, &slots, &nslots);
+	if (PAM_SUCCESS != r) {
+		goto err;
+	}
 
 	if (flags & PAM_CHANGE_EXPIRED_AUTHTOK) {
 		/* Yes, we explicitly don't want to check CRLs, OCSP or exparation of
@@ -623,11 +726,9 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	r = PAM_SUCCESS;
 
 err:
-	PKCS11_release_all_slots(ctx, slots, nslots);
-	PKCS11_CTX_unload(ctx);
-err_not_loaded:
-	PKCS11_CTX_free(ctx);
-
+#ifdef TEST
+	module_data_cleanup(pamh, global_module_data, r);
+#endif
 	return r;
 }
 
