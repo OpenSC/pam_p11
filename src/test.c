@@ -31,7 +31,7 @@
 #define LIBDIR "/usr/lib"
 #endif
 
-extern int pam_test(pam_handle_t *pamh, int flags, int argc, const char **argv);
+extern int pam_sm_test(pam_handle_t *pamh, int flags, int argc, const char **argv);
 
 int main(int argc, const char **argv)
 {
@@ -64,16 +64,18 @@ int main(int argc, const char **argv)
 			break;
 
 		default:
-			puts("Usage: test [pkcs11_module.so [username]]");
+			printf("Usage: %s [pkcs11_module.so [username]]\n", argv[0]);
+			/* fall through */
+		case 0:
 			goto err;
 	}
-	printf("Authenticating '%s' with '%s'\n", user, module);
+	printf("Using '%s' for '%s'\n", module, user);
 
 	r = pam_start("", user, &conv, &pamh);
 	if (PAM_SUCCESS != r)
 		goto pam_err;
 
-	r = pam_test(pamh, 0, sizeof pam_argv/sizeof *pam_argv, pam_argv);
+	r = pam_sm_test(pamh, 0, sizeof pam_argv/sizeof *pam_argv, pam_argv);
 	if (PAM_SUCCESS != r)
 		goto pam_err;
 

@@ -22,9 +22,9 @@
 
 #include <security/pam_modules.h>
 
-extern int pam_test(pam_handle_t *pamh, int flags, int argc, const char **argv);
+extern int pam_sm_test(pam_handle_t *pamh, int flags, int argc, const char **argv);
 
-int pam_test(pam_handle_t *pamh, int flags, int argc, const char **argv)
+int pam_sm_test(pam_handle_t *pamh, int flags, int argc, const char **argv)
 {
 	int r;
 
