@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pam_p11 0.1.7_git\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenSC/OpenSC/issues\n"
-"POT-Creation-Date: 2018-04-05 14:33+0200\n"
+"POT-Creation-Date: 2018-04-07 10:50+0200\n"
 "PO-Revision-Date: 2018-04-05 11:14+0200\n"
 "Last-Translator: Frank Morgner <frankmorgner@gmail.com>\n"
 "Language-Team: German\n"
@@ -17,48 +17,94 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/pam_p11.c:148
+#: src/pam_p11.c:136
+msgid "Error loading PKCS#11 module"
+msgstr "Fehler beim Laden des PKCS#11-Moduls"
+
+#: src/pam_p11.c:144
+msgid "Error initializing PKCS#11 module"
+msgstr "Fehler beim Initialisieren des PKCS#11-Moduls"
+
+#: src/pam_p11.c:195
 msgid " (last try)"
 msgstr " (letzter Versuch)"
 
-#: src/pam_p11.c:155
+#: src/pam_p11.c:202
 #, c-format
 msgid "Login on PIN pad with %s%s"
 msgstr "Login auf dem PIN-Pad mit %s%s"
 
-#: src/pam_p11.c:161
+#: src/pam_p11.c:208
 #, c-format
 msgid "Login with %s%s: "
 msgstr "Login mit %s%s: "
 
-#: src/pam_p11.c:170
+#: src/pam_p11.c:217
 msgid "PIN not verified; PIN locked"
 msgstr "PIN nicht verifiziert; PIN gesperrt"
 
-#: src/pam_p11.c:172
+#: src/pam_p11.c:219
 msgid "PIN not verified; one try remaining"
 msgstr "PIN nicht verifiziert; ein Versuch verbleibend"
 
-#: src/pam_p11.c:174
+#: src/pam_p11.c:221
 msgid "PIN not verified"
 msgstr "PIN nicht verifiziert"
 
-#: src/pam_p11.c:288
+#: src/pam_p11.c:263
+#, c-format
+msgid "Change PIN with PUK on PIN pad for %s"
+msgstr "Ändere PIN mit PUK auf dem PIN-Pad für %s"
+
+#: src/pam_p11.c:267
+#, c-format
+msgid "Change PIN on PIN pad for %s"
+msgstr "Ändere PIN auf dem PIN-Pad für %s"
+
+#: src/pam_p11.c:274
+#, c-format
+msgid "PUK for %s: "
+msgstr "PUK für %s: "
+
+#: src/pam_p11.c:285
+msgid "Current PIN: "
+msgstr "Aktuelle PIN: "
+
+#: src/pam_p11.c:303
+msgid "Enter new PIN: "
+msgstr "Neue PIN eingeben: "
+
+#: src/pam_p11.c:306
+msgid "Retype new PIN: "
+msgstr "Neue PIN wiederholen: "
+
+#: src/pam_p11.c:310
+msgid "PINs don't match"
+msgstr "PINs verschieden"
+
+#: src/pam_p11.c:317
+#, fuzzy
+msgid "PIN not changed; PIN locked"
+msgstr "PIN nicht verifiziert; PIN gesperrt"
+
+#: src/pam_p11.c:319
+#, fuzzy
+msgid "PIN not changed; one try remaining"
+msgstr "PIN nicht verifiziert; ein Versuch verbleibend"
+
+#: src/pam_p11.c:321
+#, fuzzy
+msgid "PIN not changed"
+msgstr "PIN nicht verifiziert"
+
+#: src/pam_p11.c:449
 msgid "No token found"
 msgstr "Kein Token gefunden"
 
-#: src/pam_p11.c:290
+#: src/pam_p11.c:451
 msgid "No authorized keys on token"
 msgstr "Keine autorisierten Schlüssel auf dem Token"
 
-#: src/pam_p11.c:338
+#: src/pam_p11.c:505
 msgid "Error verifying key"
 msgstr "Fehler beim Verifizieren des Schlüssels"
-
-#: src/pam_p11.c:387
-msgid "Error loading PKCS#11 module"
-msgstr "Fehler beim Laden des PKCS#11-Moduls"
-
-#: src/pam_p11.c:395
-msgid "Error initializing PKCS#11 module"
-msgstr "Fehler beim Initialisieren des PKCS#11-Moduls"
