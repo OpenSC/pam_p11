@@ -172,8 +172,11 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 	int ok;
 
 	if (0 == slot->token->loginRequired
+#ifdef HAVE_PKCS11_IS_LOGGED_IN
 			|| (0 == PKCS11_is_logged_in(slot, 0, &ok)
-				&& ok == 1)) {
+				&& ok == 1)
+#endif
+			) {
 		ok = 1;
 		goto err;
 	}
