@@ -139,6 +139,8 @@ void module_data_cleanup(pam_handle_t *pamh, void *data, int error_status)
 			PKCS11_CTX_unload(module_data->ctx);
 		}
 		PKCS11_CTX_free(module_data->ctx);
+		EVP_cleanup();
+		ERR_free_strings();
 	}
 }
 
