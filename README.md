@@ -67,22 +67,23 @@ password   required     pam_unix.so use_authtok nullok sha512
 
 ### User configuration via `~/.eid/authorized_certificates`
 
-A user may create a `~/.eid/` directory and create a file `~/.eid/authorized_certificates` with the authorized certificate. You can do that via
+A user may create a `~/.eid/` directory and create a file `~/.eid/authorized_certificates` with authorized certificates. You can do that via
 
 ```
 mkdir -p ~/.eid
 chmod 0755 ~/.eid
-pkcs15-tool -r 45 >> ~/.eid/authorized_certificates
+pkcs11-tool --read-object --type cert --id 45 --module /usr/lib/opensc-pkcs11.so --outfile cert.cer
+openssl x509 -inform DER -in cert.cer -outform PEM >> ~/.eid/authorized_certificates
 chmod 0644 ~/.eid/authorized_certificates
 ```
 
-This example uses the "pkcs15-tool" command from opensc to read the default user certificate (id `45`) from the smart card.
+This example uses the `pkcs11-tool` command from opensc to read a certificate (id `45`) from the smart card. Use `pkcs11-tool --list-objects --type cert --module /usr/lib/opensc-pkcs11.so` to view all certificates available on the card.
 
-It is very important that only the user of the file can write to it.  You can have any number of certificates in that file. The certificates need to be in "pem" format. "der" format is currently not supported.
+It is very important that only the user of the file can write to it. You can have any number of certificates in that file. The certificates need to be in PEM format. DER format is not supported.
 
 ### User configuration via `~/.ssh/authorized_keys`
 
-A user may create a `~/.ssh/` directory and create a file `~/.ssh/authorized_keys` with the authorized public key. You can do that via
+A user may create a `~/.ssh/` directory and create a file `~/.ssh/authorized_keys` with authorized public keys. You can do that via
 
 ```
 mkdir -p ~/.ssh
@@ -99,4 +100,4 @@ Note it is currently not possible to convert existing ssh keys into pem format a
 
 ## Security Note
 
-Both pam_p11 modules are plain, they simple compare public keys and request the cryptographic token to sign some random data and verifiy the signature with the public key. No CA chain checking is done, no CRL is looked at, and they don't know what OCSP is. This works fine for small installations, but if you want any of those features, please have a look at [Pam_pkcs11](https://github.com/OpenSC/pam_pkcs11) for a fully fledged pam module for smart card authentication.
+pam_p11 simply compares public keys and request the cryptographic token to sign some random data and verifiy the signature with the public key. No CA chain checking is done, no CRL is looked at, and they don't know what OCSP is. This works fine for small installations, but if you want any of those features, please have a look at [Pam_pkcs11](https://github.com/OpenSC/pam_pkcs11) for a fully fledged pam module for smart card authentication.
