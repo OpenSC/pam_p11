@@ -1,5 +1,16 @@
 language: c
 
+env:
+  global:
+    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+    #   via the "travis encrypt" command using the project repo's public key
+    - secure: "OdHSl6jidHKEiVYcRJrCULBLWdRlJ5TA5kXJW/Z9nwebO5cvlqHSFDvI83AYo45yX4rAX+QrLzyUpP7XZV3orPXleT8dl6EVWX1s/eMQXkB+yBGiTTkOvY0TZihjj9HYTtIo8vyCHW4aQhcGR71i74RYUugCNZqUGco+I300L4lf4HA62hLpbvktigu5RkKfaO9SMVlCQ3ZbmoyXIZxSygPyjydgsRsLiT7BG1xGqwqu/gVQI9pxU4Og5m00A4Y+1Nxi+YBywx2PJSnkp9UtGZAhXPZnvGmupWAq+oXJ591hulp/7L2uLPohiRMnPbBc8RG5N87ylkxnlUadWS2rsYhN12ITZACNxxe/X0FjlZqobqe5bZIoGpICAKth/mWnVn1PCMrzm0zl1oJEaYl7S4UOWKnX0qGaMvU585Pghw2qmKl0PJ05WI5LZiPloWjAsWG4sPd9r3BPGdk65ZF0YP9Jws1/CXBhRruW2WXvAxMk6emS4CcNEwIEfL+XvHn7TRGCvFLZHqU2vUC7PwYuEayeI6liy82BY6RTz1pGQabJrrof08b5wV9DT0UcJmOLa77DuLu8YWR/4tMDEqG+3ZLbmYJdV5mZAm+ou1SIiFHtFJUVzv8WpM3oe4RaIRuCWsulgi+XD5DUb/bhPmj/ctVen9cICXpMNSgeaANfsu4="
+    - COVERITY_SCAN_BRANCH_PATTERN="(master|coverity.*)"
+    - COVERITY_SCAN_NOTIFICATION_EMAIL="frankmorgner@gmail.com"
+    - COVERITY_SCAN_BUILD_COMMAND="make -j 4"
+    - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
+    - SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+
 addons:
   apt_packages:
     - libp11-dev
@@ -7,13 +18,20 @@ addons:
     - libpam0g-dev
     - autopoint
 
-compiler:
-  - clang
-  - gcc
+matrix:
+  include:
+    - compiler: clang
+    - compiler: gcc
+    - env: DO_COVERITY_SCAN=yes
 
 before_script:
   - ./bootstrap
   - ./configure
+  # Optionally try to upload to Coverity Scan
+  # On error (propably quota is exhausted), just continue
+  - if [ -n "${DO_COVERITY_SCAN}" ]; then curl -s 'https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh' | bash || true; fi
 
 script:
-  - make distcheck
+  - if [ -n "${DO_COVERITY_SCAN}" ]; then
+      make distcheck;
+    fi
