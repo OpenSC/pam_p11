@@ -1,5 +1,16 @@
 language: c
 
+env:
+  global:
+    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+    #   via the "travis encrypt" command using the project repo's public key
+    - secure: "ByZq6EUK5MXuqJIhI1xSu1cmi/P7lKRi476LrOLmOHhE+w7Go99YVFPeNH27eIROnRYzlYosloFknHxZ2vsJxAKMaQjmmqLASxGXw3hYcvCX2P9/WJaSagw8WenrcC0gFLNVljiYMEKqaBbldVuG8Bz+HpeyyDvm4TfShDic9Kw="
+    - COVERITY_SCAN_BRANCH_PATTERN="(master|coverity.*)"
+    - COVERITY_SCAN_NOTIFICATION_EMAIL="frankmorgner@gmail.com"
+    - COVERITY_SCAN_BUILD_COMMAND="make -j 4"
+    - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
+    - SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+
 addons:
   apt_packages:
     - libp11-dev
@@ -7,13 +18,20 @@ addons:
     - libpam0g-dev
     - autopoint
 
-compiler:
-  - clang
-  - gcc
+matrix:
+  include:
+    - compiler: clang
+    - compiler: gcc
+    - env: DO_COVERITY_SCAN=yes
 
 before_script:
   - ./bootstrap
   - ./configure
+  # Optionally try to upload to Coverity Scan
+  # On error (propably quota is exhausted), just continue
+  - if [ -n "${DO_COVERITY_SCAN}" ]; then curl -s 'https://scan.coverity.com/scripts/travisci_build_coverity_scan.sh' | bash || true; fi
 
 script:
-  - make distcheck
+  - if [ -z "${DO_COVERITY_SCAN}" ]; then
+      make distcheck;
+    fi
