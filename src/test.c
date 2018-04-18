@@ -69,6 +69,8 @@ int main(int argc, const char **argv)
 		case 0:
 			goto err;
 	}
+	module[(sizeof module) - 1] = '\0';
+	user[(sizeof user) - 1] = '\0';
 	printf("Using '%s' for '%s'\n", module, user);
 
 	r = pam_start("", user, &conv, &pamh);
