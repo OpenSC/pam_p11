@@ -555,7 +555,7 @@ static int randomize(pam_handle_t *pamh, unsigned char *r, unsigned int r_len)
 		pam_syslog(pamh, LOG_CRIT, "Error reading from /dev/urandom: %s",
 				strerror(errno));
 	}
-	if (0 < fd) {
+	if (0 <= fd) {
 		close(fd);
 	}
 	return ok;
