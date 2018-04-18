@@ -220,6 +220,9 @@ static int module_refresh(pam_handle_t *pamh,
 	if (PAM_SUCCESS != pam_get_data(pamh, PACKAGE, (void *)&module_data)
 			|| NULL == module_data) {
 		r = module_initialize(pamh, flags, argc, argv, &module_data);
+		if (PAM_SUCCESS != r) {
+			goto err;
+		}
 	} else {
 		/* refresh all known slots */
 		PKCS11_release_all_slots(module_data->ctx,
