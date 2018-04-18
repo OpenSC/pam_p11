@@ -424,7 +424,7 @@ static int key_change_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 
 err:
 	if (NULL != retyped) {
-		OPENSSL_cleanse(old, strlen(retyped));
+		OPENSSL_cleanse(retyped, strlen(retyped));
 		free(retyped);
 	}
 	if (NULL != new) {
