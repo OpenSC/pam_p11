@@ -1,11 +1,10 @@
-
 AC_PREREQ(2.60)
 
 define([PACKAGE_VERSION_MAJOR], [0])
-define([PACKAGE_VERSION_MINOR], [1])
-define([PACKAGE_VERSION_FIX], [7])
-define([PACKAGE_SUFFIX], [_git])
-define([PRODUCT_BUGREPORT], [https://github.com/OpenSC/OpenSC/issues])
+define([PACKAGE_VERSION_MINOR], [2])
+define([PACKAGE_VERSION_FIX], [0])
+define([PACKAGE_SUFFIX], [])
+define([PRODUCT_BUGREPORT], [https://github.com/OpenSC/pam_p11/issues])
 
 AC_INIT([pam_p11],[PACKAGE_VERSION_MAJOR.PACKAGE_VERSION_MINOR.PACKAGE_VERSION_FIX[]PACKAGE_SUFFIX],[PRODUCT_BUGREPORT])
 AC_CONFIG_AUX_DIR([.])

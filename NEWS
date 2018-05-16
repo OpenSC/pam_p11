@@ -1,6 +1,16 @@
 NEWS for Pam_p11 -- History of user visible changes
 
-New in 0.1.7; ????-??-?? ????
+New in 0.2.0; 2018-05-16 Frank Morgner
+* Add user documentation in Readme.md
+* Add support for PIN pad readers
+* Add support for changing/unblocking PIN (use with passwd)
+* Add support for localized user feedback
+* Add support for cards without certificates (e.g. OpenPGP card)
+* Add support for PKCS#11 modules with multiple slots
+* Add support for building with OpenSSL 1.1
+* Merged opensc and openssh module into pam_p11.so
+* Fixed memory leaks, coverity issues, compiler warnings
+* Created `test-passwd` and `test-login` for testing standard use cases
 
 New in 0.1.6; 2017-03-06 Alon Bar-Lev
 * Build system rewritten (NOTICE: configure options was modified). 

@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: pam_p11 0.1.7_git\n"
-"Report-Msgid-Bugs-To: https://github.com/OpenSC/OpenSC/issues\n"
-"POT-Creation-Date: 2018-04-07 10:50+0200\n"
+"Project-Id-Version: pam_p11 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/OpenSC/pam_p11/issues\n"
+"POT-Creation-Date: 2018-05-16 18:56+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,91 +17,91 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/pam_p11.c:136
+#: src/pam_p11.c:177
 msgid "Error loading PKCS#11 module"
 msgstr ""
 
-#: src/pam_p11.c:144
+#: src/pam_p11.c:185 src/pam_p11.c:236
 msgid "Error initializing PKCS#11 module"
 msgstr ""
 
-#: src/pam_p11.c:195
+#: src/pam_p11.c:290
 msgid " (last try)"
 msgstr ""
 
-#: src/pam_p11.c:202
+#: src/pam_p11.c:297
 #, c-format
 msgid "Login on PIN pad with %s%s"
 msgstr ""
 
-#: src/pam_p11.c:208
+#: src/pam_p11.c:303
 #, c-format
 msgid "Login with %s%s: "
 msgstr ""
 
-#: src/pam_p11.c:217
+#: src/pam_p11.c:312
 msgid "PIN not verified; PIN locked"
 msgstr ""
 
-#: src/pam_p11.c:219
+#: src/pam_p11.c:314
 msgid "PIN not verified; one try remaining"
 msgstr ""
 
-#: src/pam_p11.c:221
+#: src/pam_p11.c:316
 msgid "PIN not verified"
 msgstr ""
 
-#: src/pam_p11.c:263
+#: src/pam_p11.c:358
 #, c-format
 msgid "Change PIN with PUK on PIN pad for %s"
 msgstr ""
 
-#: src/pam_p11.c:267
+#: src/pam_p11.c:362
 #, c-format
 msgid "Change PIN on PIN pad for %s"
 msgstr ""
 
-#: src/pam_p11.c:274
+#: src/pam_p11.c:369
 #, c-format
 msgid "PUK for %s: "
 msgstr ""
 
-#: src/pam_p11.c:285
+#: src/pam_p11.c:380
 msgid "Current PIN: "
 msgstr ""
 
-#: src/pam_p11.c:303
+#: src/pam_p11.c:398
 msgid "Enter new PIN: "
 msgstr ""
 
-#: src/pam_p11.c:306
+#: src/pam_p11.c:401
 msgid "Retype new PIN: "
 msgstr ""
 
-#: src/pam_p11.c:310
+#: src/pam_p11.c:405
 msgid "PINs don't match"
 msgstr ""
 
-#: src/pam_p11.c:317
+#: src/pam_p11.c:412
 msgid "PIN not changed; PIN locked"
 msgstr ""
 
-#: src/pam_p11.c:319
+#: src/pam_p11.c:414
 msgid "PIN not changed; one try remaining"
 msgstr ""
 
-#: src/pam_p11.c:321
+#: src/pam_p11.c:416
 msgid "PIN not changed"
 msgstr ""
 
-#: src/pam_p11.c:449
+#: src/pam_p11.c:544
 msgid "No token found"
 msgstr ""
 
-#: src/pam_p11.c:451
+#: src/pam_p11.c:546
 msgid "No authorized keys on token"
 msgstr ""
 
-#: src/pam_p11.c:505
+#: src/pam_p11.c:599
 msgid "Error verifying key"
 msgstr ""
