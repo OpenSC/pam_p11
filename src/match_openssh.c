@@ -288,6 +288,9 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 	    (decoded[i + 2] << 8) + (decoded[i + 3]);
 	i += 4;
 
+	/* always check 'len' to get safe 'i' as index into 'decoded' array */
+	if (len != 19)
+		return NULL;
 	/* check key type (must be same in decoded data and at line start) */
 	if (strncmp((char *)&decoded[i], line, 19) != 0)
 		return NULL;
