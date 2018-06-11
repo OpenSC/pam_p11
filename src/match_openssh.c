@@ -200,27 +200,36 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 
 	i += len;
 
-	key = EVP_PKEY_new();
-	rsa = RSA_new();
-
+	/* to prevent access beyond 'decoded' array, index 'i' must be always checked */
+	if ( i + 4 > OPENSSH_LINE_MAX )
+		return NULL;
 	/* get integer from blob */
 	len =
 	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
 	    (decoded[i + 2] << 8) + (decoded[i + 3]);
 	i += 4;
 
+	if ( i + len > OPENSSH_LINE_MAX )
+		return NULL;
 	/* get bignum */
 	rsa_e = BN_bin2bn(decoded + i, len, NULL);
 	i += len;
 
+	if ( i + 4 > OPENSSH_LINE_MAX )
+		return NULL;
 	/* get integer from blob */
 	len =
 	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
 	    (decoded[i + 2] << 8) + (decoded[i + 3]);
 	i += 4;
 
+	if ( i + len > OPENSSH_LINE_MAX )
+		return NULL;
 	/* get bignum */
 	rsa_n = BN_bin2bn(decoded + i, len, NULL);
+
+	key = EVP_PKEY_new();
+	rsa = RSA_new();
 
 	/* set e and n */
 	if (!RSA_set0_key(rsa, rsa_n, rsa_e, NULL)) {
