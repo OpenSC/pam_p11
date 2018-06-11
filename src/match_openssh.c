@@ -242,6 +242,119 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	return key;
 }
 
+static EVP_PKEY *ssh_nistp_line_to_key(char *line)
+{
+	EVP_PKEY *key;
+	EC_KEY *ec_key;
+	BIGNUM *x;
+	BIGNUM *y;
+
+	unsigned char decoded[OPENSSH_LINE_MAX];
+	int len;
+	int flen;
+
+	char *b, *c;
+	int i;
+	int nid;
+
+	/* check allowed key size */
+	if (strncmp(line + 16, "256", 3) == 0)
+		flen = 32, nid = NID_X9_62_prime256v1;
+	else if (strncmp(line + 16, "384", 3) == 0)
+		flen = 48, nid = NID_secp384r1;
+	else if (strncmp(line + 16, "521", 3) == 0)
+		flen = 66, nid = NID_secp521r1;
+	else
+		return NULL;
+
+	/* find the mime-blob */
+	b = line;
+
+	if (!b)
+		return NULL;
+
+	/* find the first whitespace */
+	while (*b && *b != ' ')
+		b++;
+
+	/* skip that whitespace */
+	b++;
+
+	/* find the end of the blob / comment */
+	for (c = b; *c && *c != ' ' && 'c' != '\t' && *c != '\r'
+	     && *c != '\n'; c++) ;
+
+	*c = 0;
+
+	/* decode binary data */
+	if (sc_base64_decode(b, decoded, OPENSSH_LINE_MAX) < 0)
+		return NULL;
+
+	i = 0;
+	/* get integer from blob */
+	len =
+	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
+	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	i += 4;
+
+	/* always check 'len' to get safe 'i' as index into 'decoded' array */
+	if (len != 19)
+		return NULL;
+	/* check key type (must be same in decoded data and at line start) */
+	if (strncmp((char *)&decoded[i], line, 19) != 0)
+		return NULL;
+	i += len;
+
+	/* get integer from blob */
+	len =
+	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
+	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	i += 4;
+
+	/* check curve name - must match key type */
+	if(len != 8)
+		return NULL;
+	if (strncmp((char *)&decoded[i], line + 11, 8) != 0)
+		return NULL;
+	i += len;
+
+	/* get integer from blob */
+	len =
+	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
+	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	i += 4;
+
+	/* read public key (uncompressed point) */
+	/* test if data length is corresponding to key size */
+	if (len != 1 + flen * 2)
+		return NULL;
+
+	/* check uncompressed indicator */
+	if (decoded[i] != 4 )
+		return NULL;
+	i++;
+
+	/* create key */
+	ec_key = EC_KEY_new_by_curve_name(nid);
+
+	/* read point coordinates */
+	x = BN_bin2bn(decoded + i, flen, NULL);
+	i += flen;
+	y = BN_bin2bn(decoded + i, flen, NULL);
+
+	/* do error checking here: valid x, y, ec_key, point on curve.. */
+	if (!EC_KEY_set_public_key_affine_coordinates(ec_key, x, y)) {
+		EC_KEY_free(ec_key);
+		BN_free(x);
+		BN_free(y);
+		return NULL;
+	}
+
+	key = EVP_PKEY_new();
+	EVP_PKEY_assign_EC_KEY(key, ec_key);
+	return key;
+}
+
 extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
 {
 	char filename[PATH_MAX];
@@ -280,6 +393,9 @@ extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
 		} else if (strncmp("ssh-rsa", cp, 7) == 0) {
 			/* ssh v2 rsa key format */
 			key = ssh2_line_to_key(cp);
+		} else if (strncmp("ecdsa-sha2-nistp", cp, 16) == 0) {
+			/* ssh nistp256/384/521 key */
+			key = ssh_nistp_line_to_key(cp);
 		}
 		if (key == NULL)
 			continue;
