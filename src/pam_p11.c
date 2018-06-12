@@ -31,6 +31,23 @@
 #include <openssl/crypto.h>
 #include <libp11.h>
 
+/* openssl deprecated API emulation */
+#ifndef HAVE_EVP_MD_CTX_NEW
+#define EVP_MD_CTX_new()	EVP_MD_CTX_create()
+#endif
+#ifndef HAVE_EVP_MD_CTX_FREE
+#define EVP_MD_CTX_free(ctx)	EVP_MD_CTX_destroy((ctx))
+#endif
+// deprecated void EVP_MD_CTX_init(), but new int EVP_MD_CTX_reset(ctx)
+#ifndef HAVE_EVP_MD_CTX_RESET
+static int EVP_MD_CTX_reset(EVP_MD_CTX *ctx)
+{
+	if (ctx)
+		EVP_MD_CTX_init(ctx);
+	return 1;
+}
+#endif
+
 #ifdef ENABLE_NLS
 #include <libintl.h>
 #include <locale.h>
@@ -572,7 +589,7 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 	unsigned char signature[256];
 	unsigned int siglen = sizeof signature;
 	const EVP_MD *md = EVP_sha1();
-	EVP_MD_CTX *md_ctx = EVP_MD_CTX_create();
+	EVP_MD_CTX *md_ctx = EVP_MD_CTX_new();
 	EVP_PKEY *privkey = PKCS11_get_private_key(authkey);
 	EVP_PKEY *pubkey = PKCS11_get_public_key(authkey);
 
@@ -590,7 +607,7 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 			|| !EVP_SignInit(md_ctx, md)
 			|| !EVP_SignUpdate(md_ctx, challenge, sizeof challenge)
 			|| !EVP_SignFinal(md_ctx, signature, &siglen, privkey)
-			|| !EVP_MD_CTX_cleanup(md_ctx)
+			|| !EVP_MD_CTX_reset(md_ctx)
 			|| !EVP_VerifyInit(md_ctx, md)
 			|| !EVP_VerifyUpdate(md_ctx, challenge, sizeof challenge)
 			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
@@ -607,7 +624,7 @@ err:
 	if (NULL != privkey)
 		EVP_PKEY_free(privkey);
 	if (NULL != md_ctx) {
-		EVP_MD_CTX_destroy(md_ctx);
+		EVP_MD_CTX_free(md_ctx);
 	}
 	return ok;
 }
