@@ -596,7 +596,11 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 			|| !EVP_SignInit(md_ctx, md)
 			|| !EVP_SignUpdate(md_ctx, challenge, sizeof challenge)
 			|| !EVP_SignFinal(md_ctx, signature, &siglen, privkey)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 			|| !EVP_MD_CTX_cleanup(md_ctx)
+#else
+			|| !EVP_MD_CTX_reset(md_ctx)
+#endif
 			|| !EVP_VerifyInit(md_ctx, md)
 			|| !EVP_VerifyUpdate(md_ctx, challenge, sizeof challenge)
 			|| 1 != EVP_VerifyFinal(md_ctx, signature, siglen, pubkey)) {
