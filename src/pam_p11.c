@@ -38,14 +38,8 @@
 #ifndef HAVE_EVP_MD_CTX_FREE
 #define EVP_MD_CTX_free(ctx)	EVP_MD_CTX_destroy((ctx))
 #endif
-// deprecated void EVP_MD_CTX_init(), but new int EVP_MD_CTX_reset(ctx)
 #ifndef HAVE_EVP_MD_CTX_RESET
-static int EVP_MD_CTX_reset(EVP_MD_CTX *ctx)
-{
-	if (ctx)
-		EVP_MD_CTX_init(ctx);
-	return 1;
-}
+#define EVP_MD_CTX_reset(ctx)	EVP_MD_CTX_cleanup((ctx))
 #endif
 
 #ifdef ENABLE_NLS
