@@ -55,10 +55,10 @@ int main(int argc, const char **argv)
 
 	switch (argc) {
 		case 3:
-			strncpy(user, argv[2], sizeof user);
+			strncpy(user, argv[2], (sizeof user) - 1);
 			/* fall through */
 		case 2:
-			strncpy(module, argv[1], sizeof module);
+			strncpy(module, argv[1], (sizeof module) - 1);
 			/* fall through */
 		case 1:
 			break;
