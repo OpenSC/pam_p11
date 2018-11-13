@@ -109,14 +109,17 @@ dnl Checks for header files.
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([ \
-	string.h syslog.h fcntl.h unistd.h security/pam_ext.h \
+	string.h syslog.h fcntl.h unistd.h security/pam_ext.h security/pam_misc.h \
 ])
 AC_TYPE_SIZE_T
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_FUNC_STAT
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([memset strdup strerror PKCS11_enumerate_public_keys PKCS11_is_logged_in])
+AC_CHECK_FUNCS([memset strdup strerror PKCS11_enumerate_public_keys PKCS11_is_logged_in pam_vprompt openpam_ttyconv])
+
+AC_CHECK_LIB([pam_misc], [misc_conv])
+AM_CONDITIONAL([HAVE_PAM_MISC], [test "$ac_cv_lib_pam_misc_misc_conv" = yes])
 
 CFLAGS="${saved_CFLAGS}"
 LIBS="$saved_LIBS"

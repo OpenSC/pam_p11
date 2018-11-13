@@ -64,6 +64,9 @@
 #include <security/pam_ext.h>
 #else
 #define pam_syslog(handle, level, msg...) syslog(level, ## msg)
+#endif
+
+#ifndef HAVE_PAM_VPROMPT
 static int pam_vprompt(pam_handle_t *pamh, int style, char **response,
 		const char *fmt, va_list args)
 {
@@ -129,7 +132,13 @@ int prompt(int flags, pam_handle_t *pamh, int style, char **response,
 	} else {
 		va_list args;
 		va_start (args, fmt);
-		r = pam_vprompt(pamh, style, response, fmt, args);
+		if (!response) {
+			char *p = NULL;
+			r = pam_vprompt(pamh, style, &p, fmt, args);
+			free(p);
+		} else {
+			r = pam_vprompt(pamh, style, response, fmt, args);
+		}
 		va_end(args);
 	}
 
