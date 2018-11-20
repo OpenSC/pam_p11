@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <openssl/crypto.h>
 #include <libp11.h>
+#include <regex.h>
 
 /* openssl deprecated API emulation */
 #ifndef HAVE_EVP_MD_CTX_NEW
@@ -196,7 +197,7 @@ static int module_initialize(pam_handle_t * pamh,
 
 	/* Load and initialize PKCS#11 module */
 	data->ctx = PKCS11_CTX_new();
-	if (1 != argc || NULL == data->ctx
+	if (0 == argc || NULL == data->ctx
 			|| 0 != PKCS11_CTX_load(data->ctx, argv[0])) {
 		pam_syslog(pamh, LOG_ALERT, "Loading PKCS#11 engine failed: %s\n",
 				ERR_reason_error_string(ERR_get_error()));
@@ -238,7 +239,8 @@ err:
 static int module_refresh(pam_handle_t *pamh,
 		int flags, int argc, const char **argv,
 		const char **user, PKCS11_CTX **ctx,
-		PKCS11_SLOT **slots, unsigned int *nslots)
+		PKCS11_SLOT **slots, unsigned int *nslots,
+		const char **pin_regex)
 {
 	int r;
 	struct module_data *module_data;
@@ -265,6 +267,20 @@ static int module_refresh(pam_handle_t *pamh,
 		}
 	}
 
+	if (1 < argc) {
+		*pin_regex = argv[1];
+	} else {
+#ifdef __APPLE__
+		/* If multiple PAMs are allowed for macOS' login, then the captured
+		 * password is used for all possible modules. To not block the token's
+		 * PIN if the user enters his standard password, we're refusing to use
+		 * anything that doesn't look like a PIN. */
+		*pin_regex = "^[[:digit:]]*$";
+#else
+		*pin_regex = NULL;
+#endif
+	}
+
 	r = pam_get_user(pamh, user, NULL);
 	if (PAM_SUCCESS != r) {
 		pam_syslog(pamh, LOG_ERR, "pam_get_user() failed %s",
@@ -284,7 +300,7 @@ err:
 extern int match_user_opensc(EVP_PKEY *authkey, const char *login);
 extern int match_user_openssh(EVP_PKEY *authkey, const char *login);
 
-static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
+static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot, const char *pin_regex)
 {
 	char *password = NULL;
 	int ok;
@@ -333,6 +349,29 @@ static int key_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 		}
 	}
 
+	if (NULL != password && NULL != pin_regex && 0 < strlen(pin_regex)) {
+		regex_t regex;
+		int regex_compiled = 0;
+		int result = 0;
+		result = regcomp(&regex, pin_regex, REG_EXTENDED);
+		if (0 == result) {
+			regex_compiled = 1;
+			result = regexec(&regex, password, 0, NULL, 0);
+		}
+		if (result) {
+			char regex_error[256];
+			regerror(result, &regex, regex_error, sizeof regex_error);
+			pam_syslog(pamh, LOG_CRIT, "PIN regex didn't match: %s",
+					regex_error);
+			if (1 == regex_compiled) {
+				regfree(&regex);
+			}
+			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("Invalid PIN"));
+			goto err;
+		}
+		regfree(&regex);
+	}
+
 	if (0 != PKCS11_login(slot, 0, password)) {
 		if (slot->token->userPinLocked) {
 			prompt(flags, pamh, PAM_ERROR_MSG, NULL, _("PIN not verified; PIN locked"));
@@ -357,7 +396,7 @@ err:
 	return ok;
 }
 
-static int key_change_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
+static int key_change_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot, const char *pin_regex)
 {
 	char *old = NULL, *new = NULL, *retyped = NULL;
 	int ok;
@@ -373,7 +412,7 @@ static int key_change_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot)
 	 * a R/W user session to change the PIN via PIN */
 	if (0 != PKCS11_open_session(slot, 1)
 			|| (0 == slot->token->userPinLocked
-				&& 1 != key_login(pamh, flags, slot))) {
+				&& 1 != key_login(pamh, flags, slot, pin_regex))) {
 		goto err;
 	}
 
@@ -647,9 +686,10 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_KEY *authkey;
 	PKCS11_SLOT *slots, *authslot;
 	const char *user;
+	const char *pin_regex;
 
 	r = module_refresh(pamh, flags, argc, argv,
-			&user, &ctx, &slots, &nslots);
+			&user, &ctx, &slots, &nslots, &pin_regex);
 	if (PAM_SUCCESS != r) {
 		goto err;
 	}
@@ -659,7 +699,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
-	if (1 != key_login(pamh, flags, authslot)
+	if (1 != key_login(pamh, flags, authslot, pin_regex)
 			|| 1 != key_verify(pamh, flags, authkey)) {
 		if (authslot->token->userPinLocked) {
 			r = PAM_MAXTRIES;
@@ -718,10 +758,10 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	unsigned int nslots;
 	PKCS11_KEY *authkey;
 	PKCS11_SLOT *slots, *authslot;
-	const char *user;
+	const char *user, *pin_regex;
 
 	r = module_refresh(pamh, flags, argc, argv,
-			&user, &ctx, &slots, &nslots);
+			&user, &ctx, &slots, &nslots, &pin_regex);
 	if (PAM_SUCCESS != r) {
 		goto err;
 	}
@@ -745,7 +785,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (flags & PAM_UPDATE_AUTHTOK) {
-		if (1 != key_change_login(pamh, flags, authslot)) {
+		if (1 != key_change_login(pamh, flags, authslot, pin_regex)) {
 			if (authslot->token->userPinLocked) {
 				r = PAM_MAXTRIES;
 			} else {

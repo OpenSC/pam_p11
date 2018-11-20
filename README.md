@@ -60,6 +60,8 @@ To allow changing and unblocking the PIN via pam_p11, add the following to your 
 password  optional    /usr/local/lib/security/pam_p11.so  /usr/local/lib/opensc-pkcs11.so
 ```
 
+An optional second argument to `pam_p11.so` may be used to check for a specific format when prompting for the token's password. On macOS this defaults to the regular expression `^[[:digit:]]*$` to avoid confusion with the user's password in the login screen. pam_p11 uses [POSIX-Extended Regular Expressions](https://man.openbsd.org/re_format.7) for matching.
+
 ### User configuration via `~/.eid/authorized_certificates`
 
 A user may create a `~/.eid/` directory and create a file `~/.eid/authorized_certificates` with authorized certificates. You can do that via
