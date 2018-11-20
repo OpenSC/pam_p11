@@ -32,37 +32,32 @@ Pam_p11 depends on pkg-config, openssl, libp11 and pam.  If you don't have pkg-c
 
 ## Using pam_p11
 
-To use pam_p11 with some application like login, edit /etc/pam.d/login and replace
+### Login
+
+To use pam_p11 with some application like `sudo`, edit `/etc/pam.d/sudo` and add something like the following at the beginning of the file:
 
 ```
-auth       required     pam_unix.so nullok
+auth      sufficient  /usr/local/lib/security/pam_p11.so  /usr/local/lib/opensc-pkcs11.so
 ```
 
-with
+Replace `/usr/local/lib/opensc-pkcs11.so` with your PKCS#11 implementation. Using an absolute path to `pam_p11.so` avoids the need to write to a system directory, which is especially useful for macOS with system integrity protection (SIP) enabled.
+
+An optional second argument to `pam_p11.so` may be used to check for a specific format when prompting for the token's password. On macOS this defaults to the regular expression `^[[:digit:]]*$` to avoid confusion with the user's password in the login screen. pam_p11 uses [POSIX-Extended Regular Expressions](https://man.openbsd.org/re_format.7) for matching.
+
+While testing it is best to keep a door open, i.e. allow also login via passwords. Replace `sufficient` with `required` and remove other unwanted PAM modules from the file only when you've successfully verified the configuration.
+
+To enable pam_p11 for all logins (graphical and terminal based), change the following configuration files as described above:
+
+| Operating System | PAM configuration file     |
+| ---------------- | -------------------------- |
+| macOS            | `/etc/pam.d/authorization` |
+
+### PIN change and unblock
+
+To allow changing and unblocking the PIN via pam_p11, add the following to your configuration:
 
 ```
-auth       required     pam_p11.so  /usr/lib/opensc-pkcs11.so
-```
-
-Replace `/usr/lib/opensc-pkcs11.so` with your PKCS#11 implementation.
-
-Also while testing it is best to keep a door open, i.e. allow also login via passwords. To try pam_p11 first and then password put into your pam configuration:
-
-```
-auth       sufficient   pam_p11.so  /usr/lib/opensc-pkcs11.so
-auth       required     pam_unix.so nullok
-```
-
-To allow changing and unblocking the PIN via pam_p11, replace
-
-```
-password   required     pam_unix.so use_authtok nullok sha512
-```
-
-with
-```
-password   optional     pam_p11.so  /usr/lib/opensc-pkcs11.so
-password   required     pam_unix.so use_authtok nullok sha512
+password  optional    /usr/local/lib/security/pam_p11.so  /usr/local/lib/opensc-pkcs11.so
 ```
 
 ### User configuration via `~/.eid/authorized_certificates`
@@ -92,7 +87,7 @@ ssh-keygen -D /usr/lib/opensc-pkcs11.so >> ~/.ssh/authorized_keys
 chmod 0644 ~/.ssh/authorized_keys
 ```
 
-This example uses the "ssh-keygen" command from openssh to read the default user public key (id 45) from the smart card in reader 0.  Note that this tool prints the public keys in two formats: ssh v1 and ssh v2 format. It is recommended to edit the file and delete one of those two lines. Also you might want to add a comment / identifier at the end of the line.
+This example uses the `ssh-keygen` command from openssh to read the default user public key (id 45) from the smart card in reader 0.  Note that this tool prints the public keys in two formats: ssh v1 and ssh v2 format. It is recommended to edit the file and delete one of those two lines. Also you might want to add a comment / identifier at the end of the line.
 
 It is very important that only the user of the file can write to it.  You can have any number of public keys in that file.
 
@@ -100,4 +95,4 @@ Note it is currently not possible to convert existing ssh keys into pem format a
 
 ## Security Note
 
-pam_p11 simply compares public keys and request the cryptographic token to sign some random data and verifiy the signature with the public key. No CA chain checking is done, no CRL is looked at, and they don't know what OCSP is. This works fine for small installations, but if you want any of those features, please have a look at [Pam_pkcs11](https://github.com/OpenSC/pam_pkcs11) for a fully fledged pam module for smart card authentication.
+pam_p11 simply compares public keys and request the cryptographic token to sign some random data and verifiy the signature with the public key. No CA chain checking is done, no CRL is looked at, and they don't know what OCSP is. This works fine for small installations, but if you want any of those features, please have a look at [Pam_pkcs11](https://github.com/OpenSC/pam_pkcs11) for a fully fledged PAM module for smart card authentication.
