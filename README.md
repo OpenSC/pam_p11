@@ -51,6 +51,8 @@ To enable pam_p11 for all logins (graphical and terminal based), change the foll
 | Operating System | PAM configuration file     |
 | ---------------- | -------------------------- |
 | macOS            | `/etc/pam.d/authorization` |
+| Debian           | `/etc/pam.d/common-auth`   |
+| Arch Linux       | `/etc/pam.d/system-auth`   |
 
 ### PIN change and unblock
 
