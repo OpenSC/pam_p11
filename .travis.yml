@@ -1,5 +1,13 @@
 language: c
 
+matrix:
+  include:
+    - compiler: clang
+      os: osx
+    - compiler: gcc
+      os: linux
+    - env: DO_COVERITY_SCAN=yes
+
 env:
   global:
     # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
@@ -11,6 +19,8 @@ env:
     - COVERITY_SCAN_PROJECT_NAME="$TRAVIS_REPO_SLUG"
     - SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
 
+sudo: false
+
 addons:
   apt_packages:
     - libp11-dev
@@ -18,11 +28,17 @@ addons:
     - libpam0g-dev
     - autopoint
 
-matrix:
-  include:
-    - compiler: clang
-    - compiler: gcc
-    - env: DO_COVERITY_SCAN=yes
+before_install:
+  - if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+        brew update;
+        brew uninstall libtool;
+        brew install libtool;
+        brew install libp11 openssl ccache;
+        export CFLAGS="-I$(brew --prefix openssl)/include"
+        export LDFLAGS="-L$(brew --prefix openssl)/lib"
+        export PATH="/usr/local/opt/ccache/libexec:$PATH";
+        export PATH="/usr/local/opt/gettext/bin:$PATH";
+    fi
 
 before_script:
   - ./bootstrap
@@ -35,3 +51,9 @@ script:
   - if [ -z "${DO_COVERITY_SCAN}" ]; then
       make distcheck;
     fi
+
+cache:
+  apt: true
+  ccache: true
+  directories:
+     - $HOME/Library/Caches/Homebrew
