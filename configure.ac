@@ -50,7 +50,7 @@ AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.18.3)
 
 dnl Add the languages which your application supports here.
-ALL_LINGUAS="de"
+ALL_LINGUAS="de it"
 
 dnl Checks for programs.
 AC_PROG_CPP
