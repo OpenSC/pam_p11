@@ -44,7 +44,7 @@ Replace `/usr/local/lib/opensc-pkcs11.so` with your PKCS#11 implementation. Usin
 
 An optional second argument to `pam_p11.so` may be used to check for a specific format when prompting for the token's password. On macOS this defaults to the regular expression `^[[:digit:]]*$` to avoid confusion with the user's password in the login screen. pam_p11 uses [POSIX-Extended Regular Expressions](https://man.openbsd.org/re_format.7) for matching.
 
-While testing it is best to keep a door open, i.e. allow also login via passwords. Replace `sufficient` with `required` and remove other unwanted PAM modules from the file only when you've successfully verified the configuration.
+While testing it is best to keep a door open. Editing the configuration files from a different machine via SSH helps reverting a bad PAM login configuration. Replace `sufficient` with `required` and remove other unwanted PAM modules from the file only when you've successfully verified the configuration.
 
 To enable pam_p11 for all logins (graphical and terminal based), change the following configuration files as described above:
 
