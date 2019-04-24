@@ -1,6 +1,13 @@
 NEWS for Pam_p11 -- History of user visible changes
 
-New in 0.2.0; 2018-05-16 Frank Morgner
+New in 0.3.0; 2019-04-24; Frank Morgner
+* Add Italian translation
+* Add support for matching the PIN-input with a regular expression
+* Add support for macOS
+* Add support for building with OpenSSL 1.1.1
+* Add support for nistp256/384/521 keys in authorized_keys file
+
+New in 0.2.0; 2018-05-16; Frank Morgner
 * Add user documentation in Readme.md
 * Add support for PIN pad readers
 * Add support for changing/unblocking PIN (use with passwd)
@@ -12,7 +19,7 @@ New in 0.2.0; 2018-05-16 Frank Morgner
 * Fixed memory leaks, coverity issues, compiler warnings
 * Created `test-passwd` and `test-login` for testing standard use cases
 
-New in 0.1.6; 2017-03-06 Alon Bar-Lev
+New in 0.1.6; 2017-03-06; Alon Bar-Lev
 * Build system rewritten (NOTICE: configure options was modified). 
 
 New in 0.1.5; 2008-08-27; Andreas Jellinghaus

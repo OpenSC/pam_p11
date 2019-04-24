@@ -9,7 +9,7 @@ Pam_p11 implements two authentication methods:
 - verify a token using a known public key found in OpenSSH's `~/.ssh/authorized_keys`.
 - verify a token using a known certificate found in `~/.eid/authorized_certificates`.
 
-Pam_p11 is very simple, it has no config file, no options other than the PKCS#11 module file, does not know about certificate chains, certificate authorities, revocation lists or OCSP. Perfect for the small installation with no frills.
+Pam_p11 is very simple, it has no config file, does not know about certificate chains, certificate authorities, revocation lists or OCSP. Perfect for the small installation with no frills.
 
 Pam_p11 was written by an international team and is licensed as Open Source software under the LGPL license.
 
@@ -37,7 +37,7 @@ Pam_p11 depends on pkg-config, openssl, libp11 and pam.  If you don't have pkg-c
 To use pam_p11 with some application like `sudo`, edit `/etc/pam.d/sudo` and add something like the following at the beginning of the file:
 
 ```
-auth      sufficient  /usr/local/lib/security/pam_p11.so  /usr/local/lib/opensc-pkcs11.so
+auth  sufficient  /usr/local/lib/security/pam_p11.so  /usr/local/lib/opensc-pkcs11.so
 ```
 
 Replace `/usr/local/lib/opensc-pkcs11.so` with your PKCS#11 implementation. Using an absolute path to `pam_p11.so` avoids the need to write to a system directory, which is especially useful for macOS with system integrity protection (SIP) enabled.
