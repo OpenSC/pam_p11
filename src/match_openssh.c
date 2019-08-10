@@ -150,7 +150,7 @@ static EVP_PKEY *ssh1_line_to_key(char *line)
 	return NULL;
 }
 
-extern int sc_base64_decode(const char *in, unsigned char *out, size_t outlen);
+extern int sc_base64_decode(const char *in, unsigned char *out, unsigned int outlen);
 
 static EVP_PKEY *ssh2_line_to_key(char *line)
 {
