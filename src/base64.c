@@ -18,7 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-extern int sc_base64_decode(const char *in, unsigned char *out, unsigned int outlen);
+#include <stddef.h>
+
+extern int sc_base64_decode(const char *in, unsigned char *out, size_t outlen);
 
 static const unsigned char bin_table[128] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -71,7 +73,7 @@ static int from_base64(const char *in, unsigned int *out, int *skip)
 	return c * 6 / 8;
 }
 
-int sc_base64_decode(const char *in, unsigned char *out, unsigned int outlen)
+int sc_base64_decode(const char *in, unsigned char *out, size_t outlen)
 {
 	int len = 0, r, skip;
 	unsigned int i;
