@@ -677,8 +677,7 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 	ok = 1;
 
 err:
-	if (NULL != signature)
-		free(signature);
+	free(signature);
 	if (NULL != pubkey)
 		EVP_PKEY_free(pubkey);
 	if (NULL != privkey)
