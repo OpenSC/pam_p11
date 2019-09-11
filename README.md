@@ -71,7 +71,7 @@ A user may create a `~/.eid/` directory and create a file `~/.eid/authorized_cer
 ```
 mkdir -p ~/.eid
 chmod 0755 ~/.eid
-pkcs11-tool --read-object --type cert --id 45 --module /usr/lib/opensc-pkcs11.so --outfile cert.cer
+pkcs11-tool --read-object --type cert --id 45 --module /usr/lib/opensc-pkcs11.so --output-file cert.cer
 openssl x509 -inform DER -in cert.cer -outform PEM >> ~/.eid/authorized_certificates
 chmod 0644 ~/.eid/authorized_certificates
 ```
