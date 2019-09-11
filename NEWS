@@ -1,5 +1,8 @@
 NEWS for Pam_p11 -- History of user visible changes
 
+New in 0.3.1; 2019-09-11; Frank Morgner
+* CVE-2019-16058: Fixed buffer overflow when creating signatures longer than 256 bytes
+
 New in 0.3.0; 2019-04-24; Frank Morgner
 * Add Italian translation
 * Add support for matching the PIN-input with a regular expression
