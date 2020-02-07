@@ -50,7 +50,7 @@ static int from_base64(const char *in, unsigned int *out, int *skip)
 		unsigned char b;
 		int k = *in;
 
-		if (k < 0 || k >= (int)sizeof(bin_table))
+		if (k < 0)
 			return -1;
 		if (k == 0 && c == 0)
 			return 0;
