@@ -34,6 +34,7 @@ before_install:
         brew uninstall libtool;
         brew install libtool;
         brew install libp11 openssl ccache;
+        brew link --force openssl;
         export CFLAGS="-I$(brew --prefix openssl)/include"
         export LDFLAGS="-L$(brew --prefix openssl)/lib"
         export PATH="/usr/local/opt/ccache/libexec:$PATH";
