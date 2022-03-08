@@ -500,9 +500,15 @@ extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
 		if (key == NULL)
 			continue;
 
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
 		if (1 == EVP_PKEY_cmp(authkey, key)) {
 			found = 1;
 		}
+#else
+		if (1 == EVP_PKEY_eq(authkey, key)) {
+			found = 1;
+		}
+#endif
 		EVP_PKEY_free(key);
 	} while (found == 0);
 
