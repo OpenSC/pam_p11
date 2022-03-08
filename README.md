@@ -13,7 +13,7 @@ Pam_p11 is very simple, it has no config file, does not know about certificate c
 
 Pam_p11 was written by an international team and is licensed as Open Source software under the LGPL license.
 
-[![Build Status](https://travis-ci.org/OpenSC/pam_p11.svg?branch=master)](https://travis-ci.org/OpenSC/pam_p11) [![Coverity Scan Status](https://scan.coverity.com/projects/15452/badge.svg)](https://scan.coverity.com/projects/opensc-pam_p11)
+[![GitHub CI status](https://img.shields.io/github/workflow/status/OpenSC/pam_p11/Build/master?label=Linux%2FmacOS&logo=github)](https://github.com/OpenSC/pam_p11/actions/workflows/ci.yml?branch=master) [![Coverity Scan CI Status](https://img.shields.io/coverity/scan/15452.svg?label=Coverity%20Scan)](https://scan.coverity.com/projects/15452)
 
 ## Installing pam_p11
 
