@@ -24,8 +24,6 @@ case "$1" in
         export LDFLAGS="-L$(brew --prefix gettext)/lib -lintl"
         export OPENSSL_CFLAGS="-I$(brew --prefix openssl)/include"
         export OPENSSL_LIBS="-L$(brew --prefix openssl)/lib -lcrypto"
-        # TODO https://github.com/OpenSC/pam_p11/pull/22
-        export CPPFLAGS="-DOPENSSL_SUPPRESS_DEPRECATED"
         ;;
 esac
 
