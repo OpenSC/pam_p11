@@ -75,8 +75,8 @@ static int from_base64(const char *in, unsigned int *out, int *skip)
 
 int sc_base64_decode(const char *in, unsigned char *out, size_t outlen)
 {
-	int len = 0, r, skip;
-	unsigned int i;
+	int len = 0, r = 0, skip = 0;
+	unsigned int i = 0;
 
 	while ((r = from_base64(in, &i, &skip)) > 0) {
 		int finished = 0, s = 16;
