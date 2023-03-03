@@ -70,11 +70,11 @@ ifdef(
 PKG_CHECK_MODULES([LIBP11], [libp11 >= 0.2.4],, [AC_MSG_ERROR([libp11 is required])])
 PKG_CHECK_MODULES(
 	[OPENSSL],
-	[libcrypto >= 0.9.7],
+	[libcrypto >= 1.1.1],
 	,
 	[PKG_CHECK_MODULES(
 		[OPENSSL],
-		[openssl >= 0.9.7],
+		[openssl >= 1.1.1],
 		,
 		[AC_CHECK_LIB(
 			[crypto],
@@ -85,10 +85,10 @@ PKG_CHECK_MODULES(
 	)]
 )
 
-saved_LIBS="$LIBS"
-LIBS="$OPENSSL_LIBS $LIBS"
-AC_CHECK_FUNCS(EVP_MD_CTX_new EVP_MD_CTX_free EVP_MD_CTX_reset)
-LIBS="$saved_LIBS"
+#saved_LIBS="$LIBS"
+#LIBS="$OPENSSL_LIBS $LIBS"
+#AC_CHECK_FUNCS(EVP_MD_CTX_new EVP_MD_CTX_free EVP_MD_CTX_reset)
+#LIBS="$saved_LIBS"
 
 if test -z "${PAM_LIBS}"; then
 	AC_ARG_VAR([PAM_CFLAGS], [C compiler flags for pam])

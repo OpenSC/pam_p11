@@ -33,17 +33,6 @@
 #include <regex.h>
 #include <stdlib.h>
 
-/* openssl deprecated API emulation */
-#ifndef HAVE_EVP_MD_CTX_NEW
-#define EVP_MD_CTX_new()	EVP_MD_CTX_create()
-#endif
-#ifndef HAVE_EVP_MD_CTX_FREE
-#define EVP_MD_CTX_free(ctx)	EVP_MD_CTX_destroy((ctx))
-#endif
-#ifndef HAVE_EVP_MD_CTX_RESET
-#define EVP_MD_CTX_reset(ctx)	EVP_MD_CTX_cleanup((ctx))
-#endif
-
 #ifdef ENABLE_NLS
 #include <libintl.h>
 #include <locale.h>
