@@ -58,8 +58,12 @@ int main(int argc, const char **argv)
 
 	/* initialize default values */
 	strcpy(module, LIBDIR "/opensc-pkcs11.so");
-	if (0 != getlogin_r(user, sizeof user))
-		goto err;
+	if (argc < 3) {
+		if (0 != getlogin_r(user, sizeof user)) {
+			perror("getlogin_r");
+			goto err;
+		}
+	}
 
 	switch (argc) {
 		case 3:
