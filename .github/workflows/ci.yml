@@ -15,16 +15,22 @@ jobs:
   macos:
     runs-on: macos-11
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: .github/build.sh macos
 
   ubuntu:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - run: .github/build.sh ubuntu
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: pam_p11
         path:
           pam_p11*.tar.gz
+
+  ubuntu-22:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - run: .github/build.sh ubuntu
