@@ -63,7 +63,7 @@ int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d)
 
 #endif
 
-static EVP_PKEY *init_evp_pkey_rsa(BIGNUM *rsa_e, BIGNUM *rsa_n)
+static EVP_PKEY *init_evp_pkey_rsa(BIGNUM *rsa_n, BIGNUM *rsa_e)
 {
 	EVP_PKEY *key = NULL;
 
