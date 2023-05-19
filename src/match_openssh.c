@@ -115,6 +115,26 @@ static EVP_PKEY *init_evp_pkey_ec(int nid_curve, const unsigned char *buf, size_
 {
 	EVP_PKEY *key = NULL;
 
+#if defined(LIBRESSL_VERSION_NUMBER)
+	BIGNUM *x = NULL;
+	BIGNUM *y = NULL;
+	EC_KEY *ec_key = NULL;
+
+	if ((key = EVP_PKEY_new()) == NULL
+			|| (x = BN_bin2bn(buf + 1, len >> 1, NULL)) == NULL
+			|| (y = BN_bin2bn(buf + 1 + (len >> 1), len >> 1, NULL)) == NULL
+			|| ((ec_key = EC_KEY_new_by_curve_name(nid_curve)) == NULL
+			|| (1 != EC_KEY_set_public_key_affine_coordinates(ec_key, x, y))
+			|| (1 != EVP_PKEY_assign_EC_KEY(key, ec_key)))) {
+		EVP_PKEY_free(key);
+		BN_free(x);
+		BN_free(y);
+		EC_KEY_free(ec_key);
+		EVP_PKEY_free(key);
+		return NULL;
+	}
+#else
+
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
 	BN_CTX *ctx = NULL;
 	EC_KEY *ec_key = NULL;
@@ -161,7 +181,7 @@ static EVP_PKEY *init_evp_pkey_ec(int nid_curve, const unsigned char *buf, size_
 		return NULL;
 	}
 #endif
-
+#endif
 	return key;
 }
 
