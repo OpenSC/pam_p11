@@ -63,7 +63,7 @@ int RSA_set0_key(RSA *r, BIGNUM *n, BIGNUM *e, BIGNUM *d)
 
 #endif
 
-static EVP_PKEY *init_evp_pkey_rsa(BIGNUM *rsa_e, BIGNUM *rsa_n)
+static EVP_PKEY *init_evp_pkey_rsa(BIGNUM *rsa_n, BIGNUM *rsa_e)
 {
 	EVP_PKEY *key = NULL;
 
@@ -111,31 +111,44 @@ static EVP_PKEY *init_evp_pkey_rsa(BIGNUM *rsa_e, BIGNUM *rsa_n)
 	return key;
 }
 
-static EVP_PKEY *init_evp_pkey_ec(int nid_curve, BIGNUM *pub_x, BIGNUM *pub_y)
+static EVP_PKEY *init_evp_pkey_ec(int nid_curve, const unsigned char *buf, size_t len)
 {
 	EVP_PKEY *key = NULL;
 
-	if (!pub_x || !pub_y)
-		return NULL;
+#if defined(LIBRESSL_VERSION_NUMBER)
+	BIGNUM *x = NULL;
+	BIGNUM *y = NULL;
+	EC_KEY *ec_key = NULL;
 
-#if OPENSSL_VERSION_NUMBER < 0x30000000L
-	key = EVP_PKEY_new();
-	if (!key)
-		return NULL;
-
-	EC_KEY *ec_key = EC_KEY_new_by_curve_name(nid_curve);
-	if (!ec_key) {
+	if ((key = EVP_PKEY_new()) == NULL
+			|| (x = BN_bin2bn(buf + 1, len >> 1, NULL)) == NULL
+			|| (y = BN_bin2bn(buf + 1 + (len >> 1), len >> 1, NULL)) == NULL
+			|| ((ec_key = EC_KEY_new_by_curve_name(nid_curve)) == NULL
+			|| (1 != EC_KEY_set_public_key_affine_coordinates(ec_key, x, y))
+			|| (1 != EVP_PKEY_assign_EC_KEY(key, ec_key)))) {
 		EVP_PKEY_free(key);
-		return NULL;
-	}
-
-	/* do error checking here: valid x, y, ec_key, point on curve.. */
-	if (!EC_KEY_set_public_key_affine_coordinates(ec_key, pub_x, pub_y)) {
+		BN_free(x);
+		BN_free(y);
 		EC_KEY_free(ec_key);
 		EVP_PKEY_free(key);
 		return NULL;
 	}
-	EVP_PKEY_assign_EC_KEY(key, ec_key);
+#else
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+	BN_CTX *ctx = NULL;
+	EC_KEY *ec_key = NULL;
+
+	if ((key = EVP_PKEY_new()) == NULL
+			|| (ctx = BN_CTX_new()) == NULL
+			|| (ec_key = EC_KEY_new_by_curve_name(nid_curve)) == NULL
+			|| (1 != EC_KEY_oct2key(ec_key, buf, len, ctx))
+			|| (1 != EVP_PKEY_assign_EC_KEY(key, ec_key))) {
+		EC_KEY_free(ec_key);
+		BN_CTX_free(ctx);
+		EVP_PKEY_free(key);
+		return NULL;
+	}
 #else
 	OSSL_PARAM_BLD *bld = NULL;
 	OSSL_PARAM *params = NULL;
@@ -158,8 +171,7 @@ static EVP_PKEY *init_evp_pkey_ec(int nid_curve, BIGNUM *pub_x, BIGNUM *pub_y)
 	if ((pctx = EVP_PKEY_CTX_new_from_name(NULL, "EC", NULL)) == NULL
 			|| (bld = OSSL_PARAM_BLD_new()) == NULL
 			|| !OSSL_PARAM_BLD_push_utf8_string(bld, OSSL_PKEY_PARAM_GROUP_NAME, group_name, 0)
-			|| !OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_EC_PUB_X, pub_x)
-			|| !OSSL_PARAM_BLD_push_BN(bld, OSSL_PKEY_PARAM_EC_PUB_Y, pub_y)
+			|| !OSSL_PARAM_BLD_push_octet_string(bld, OSSL_PKEY_PARAM_PUB_KEY, buf, len)
 			|| (params = OSSL_PARAM_BLD_to_param(bld)) == NULL
 			|| EVP_PKEY_fromdata_init(pctx) <= 0
 			|| EVP_PKEY_fromdata(pctx, &key, EVP_PKEY_PUBLIC_KEY, params) <= 0) {
@@ -169,7 +181,7 @@ static EVP_PKEY *init_evp_pkey_ec(int nid_curve, BIGNUM *pub_x, BIGNUM *pub_y)
 		return NULL;
 	}
 #endif
-
+#endif
 	return key;
 }
 
@@ -351,10 +363,6 @@ err:
 
 static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 {
-	EVP_PKEY *key;
-	BIGNUM *x;
-	BIGNUM *y;
-
 	unsigned char decoded[OPENSSH_LINE_MAX];
 	int len;
 	int flen;
@@ -438,22 +446,8 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 	/* check uncompressed indicator */
 	if (decoded[i] != 4 )
 		return NULL;
-	i++;
 
-	/* read point coordinates */
-	x = BN_bin2bn(decoded + i, flen, NULL);
-	i += flen;
-	y = BN_bin2bn(decoded + i, flen, NULL);
-
-	key = init_evp_pkey_ec(nid, x, y);
-	if (!key) {
-		if (x)
-			BN_free(x);
-		if (y)
-			BN_free(y);
-	}
-
-	return key;
+	return init_evp_pkey_ec(nid, decoded + i, len);
 }
 
 extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
