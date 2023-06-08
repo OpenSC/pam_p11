@@ -1,5 +1,10 @@
 NEWS for Pam_p11 -- History of user visible changes
 
+New in 0.3.2; 2023-06-08; Frank Morgner
+* Add Russian translation
+* Add support for building with LibreSSL
+* Add support for building with OpenSSL 3.0 and later
+
 New in 0.3.1; 2019-09-11; Frank Morgner
 * CVE-2019-16058: Fixed buffer overflow when creating signatures longer than 256 bytes
 

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pam-p11\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenSC/pam_p11/issues\n"
-"POT-Creation-Date: 2019-09-11 22:42+0200\n"
+"POT-Creation-Date: 2023-06-08 18:38+0200\n"
 "PO-Revision-Date: 2019-02-28 14:03+0000\n"
 "Last-Translator: Milo Casagrande <milo@milo.name>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
@@ -16,95 +16,95 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/pam_p11.c:205
+#: src/pam_p11.c:194
 msgid "Error loading PKCS#11 module"
 msgstr "Errore nel caricare il modulo PKCS#11"
 
-#: src/pam_p11.c:213 src/pam_p11.c:265
+#: src/pam_p11.c:202 src/pam_p11.c:254
 msgid "Error initializing PKCS#11 module"
 msgstr "Errore nell'inizializzare il modulo PKCS#11"
 
-#: src/pam_p11.c:333
+#: src/pam_p11.c:322
 msgid " (last try)"
 msgstr " (ultimo tentativo)"
 
-#: src/pam_p11.c:340
+#: src/pam_p11.c:329
 #, c-format
 msgid "Login on PIN pad with %s%s"
 msgstr "Accesso su dispositivo inserimento PIN con %s%s"
 
-#: src/pam_p11.c:346
+#: src/pam_p11.c:335
 #, c-format
 msgid "Login with %s%s: "
 msgstr "Accesso con %s%s: "
 
-#: src/pam_p11.c:370
+#: src/pam_p11.c:359
 msgid "Invalid PIN"
 msgstr ""
 
-#: src/pam_p11.c:378
+#: src/pam_p11.c:367
 msgid "PIN not verified; PIN locked"
 msgstr "PIN non verificato; PIN bloccato"
 
-#: src/pam_p11.c:380
+#: src/pam_p11.c:369
 msgid "PIN not verified; one try remaining"
 msgstr "PIN non verificato; un tentativo rimasto"
 
-#: src/pam_p11.c:382
+#: src/pam_p11.c:371
 msgid "PIN not verified"
 msgstr "PIN non verificato"
 
-#: src/pam_p11.c:424
+#: src/pam_p11.c:413
 #, c-format
 msgid "Change PIN with PUK on PIN pad for %s"
 msgstr "Modifica del PIN con PUK su dispositivo inserimento PIN per %s"
 
-#: src/pam_p11.c:428
+#: src/pam_p11.c:417
 #, c-format
 msgid "Change PIN on PIN pad for %s"
 msgstr "Modifica del PIN su dispositivo inserimento PIN per %s"
 
-#: src/pam_p11.c:435
+#: src/pam_p11.c:424
 #, c-format
 msgid "PUK for %s: "
 msgstr "PUK per %s: "
 
-#: src/pam_p11.c:446
+#: src/pam_p11.c:435
 msgid "Current PIN: "
 msgstr "PIN attuale: "
 
-#: src/pam_p11.c:464
+#: src/pam_p11.c:453
 msgid "Enter new PIN: "
 msgstr "Inserire nuovo PIN: "
 
-#: src/pam_p11.c:467
+#: src/pam_p11.c:456
 msgid "Retype new PIN: "
 msgstr "Ripetere nuovo PIN: "
 
-#: src/pam_p11.c:471
+#: src/pam_p11.c:460
 msgid "PINs don't match"
 msgstr "I PIN non sono uguali"
 
-#: src/pam_p11.c:478
+#: src/pam_p11.c:467
 msgid "PIN not changed; PIN locked"
 msgstr "PIN non modificato; PIN bloccato"
 
-#: src/pam_p11.c:480
+#: src/pam_p11.c:469
 msgid "PIN not changed; one try remaining"
 msgstr "PIN non modificato; un tentativo rimasto"
 
-#: src/pam_p11.c:482
+#: src/pam_p11.c:471
 msgid "PIN not changed"
 msgstr "PIN non modificato"
 
-#: src/pam_p11.c:610
+#: src/pam_p11.c:599
 msgid "No token found"
 msgstr "Nessun token trovato"
 
-#: src/pam_p11.c:612
+#: src/pam_p11.c:601
 msgid "No authorized keys on token"
 msgstr "Nessuna chiave autorizzata sul token"
 
-#: src/pam_p11.c:674
+#: src/pam_p11.c:663
 msgid "Error verifying key"
 msgstr "Errore nel verificare la chiave"
