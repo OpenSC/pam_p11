@@ -496,7 +496,7 @@ err:
 
 static int key_find(pam_handle_t *pamh, int flags, const char *user,
 		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
-		PKCS11_SLOT **authslot, PKCS11_KEY **authkey)
+		PKCS11_SLOT **authslot, PKCS11_KEY **authkey, EVP_PKEY **authpubkey)
 {
 	int token_found = 0;
 
@@ -540,10 +540,8 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 				if (1 != r) {
 					r = match_user_openssh(pubkey, user);
 				}
-				if (NULL != pubkey) {
-					EVP_PKEY_free(pubkey);
-				}
 				if (1 == r) {
+					*authpubkey = pubkey;
 					*authkey = keys;
 					*authslot = slot;
 					pam_syslog(pamh, LOG_DEBUG, "Found %s",
@@ -566,10 +564,8 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 				if (1 != r) {
 					r = match_user_openssh(pubkey, user);
 				}
-				if (NULL != pubkey) {
-					EVP_PKEY_free(pubkey);
-				}
 				if (1 == r) {
+					*authpubkey = pubkey;
 					*authkey = PKCS11_find_key(certs);
 					if (NULL == *authkey) {
 						continue;
@@ -620,7 +616,7 @@ static int randomize(pam_handle_t *pamh, unsigned char *r, unsigned int r_len)
 	return ok;
 }
 
-static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
+static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey, EVP_PKEY *pubkey)
 {
 	int ok = 0;
 	unsigned char challenge[30];
@@ -629,7 +625,6 @@ static int key_verify(pam_handle_t *pamh, int flags, PKCS11_KEY *authkey)
 	const EVP_MD *md = EVP_sha1();
 	EVP_MD_CTX *md_ctx = EVP_MD_CTX_new();
 	EVP_PKEY *privkey = PKCS11_get_private_key(authkey);
-	EVP_PKEY *pubkey = PKCS11_get_public_key(authkey);
 
 	if (NULL == privkey)
 		goto err;
@@ -684,6 +679,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_CTX *ctx;
 	unsigned int nslots;
 	PKCS11_KEY *authkey;
+	EVP_PKEY *authpubkey = NULL;
 	PKCS11_SLOT *slots, *authslot;
 	const char *user;
 	const char *pin_regex;
@@ -695,12 +691,12 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
-				&authslot, &authkey)) {
+				&authslot, &authkey, &authpubkey)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
 	if (1 != key_login(pamh, flags, authslot, pin_regex)
-			|| 1 != key_verify(pamh, flags, authkey)) {
+			|| 1 != key_verify(pamh, flags, authkey, authpubkey)) {
 		if (authslot->token->userPinLocked) {
 			r = PAM_MAXTRIES;
 		} else {
@@ -757,6 +753,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_CTX *ctx;
 	unsigned int nslots;
 	PKCS11_KEY *authkey;
+	EVP_PKEY *authpubkey = NULL;
 	PKCS11_SLOT *slots, *authslot;
 	const char *user, *pin_regex;
 
@@ -774,7 +771,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
-				&authslot, &authkey)) {
+				&authslot, &authkey, &authpubkey)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
@@ -798,6 +795,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	r = PAM_SUCCESS;
 
 err:
+	EVP_PKEY_free(authpubkey);
 #ifdef TEST
 	module_data_cleanup(pamh, global_module_data, r);
 #endif
