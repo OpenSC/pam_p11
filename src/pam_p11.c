@@ -496,7 +496,8 @@ err:
 
 static int key_find(pam_handle_t *pamh, int flags, const char *user,
 		PKCS11_CTX *ctx, PKCS11_SLOT *slots, unsigned int nslots,
-		PKCS11_SLOT **authslot, PKCS11_KEY **authkey, EVP_PKEY **authpubkey)
+		PKCS11_SLOT **authslot, PKCS11_KEY **authkey,
+		EVP_PKEY **authpubkey, PKCS11_CERT **authcert)
 {
 	int token_found = 0;
 
@@ -506,6 +507,7 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 
 	*authkey = NULL;
 	*authslot = NULL;
+	*authcert = NULL;
 
 	/* search all valuable slots for a key that is authorized by the user */
 	while (0 < nslots) {
@@ -566,10 +568,7 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 				}
 				if (1 == r) {
 					*authpubkey = pubkey;
-					*authkey = PKCS11_find_key(certs);
-					if (NULL == *authkey) {
-						continue;
-					}
+					*authcert = certs;
 					*authslot = slot;
 					pam_syslog(pamh, LOG_DEBUG, "Found %s",
 							certs->label);
@@ -679,6 +678,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_CTX *ctx;
 	unsigned int nslots;
 	PKCS11_KEY *authkey;
+	PKCS11_CERT *authcert;
 	EVP_PKEY *authpubkey = NULL;
 	PKCS11_SLOT *slots, *authslot;
 	const char *user;
@@ -691,12 +691,21 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
-				&authslot, &authkey, &authpubkey)) {
+				&authslot, &authkey, &authpubkey, &authcert)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
-	if (1 != key_login(pamh, flags, authslot, pin_regex)
-			|| 1 != key_verify(pamh, flags, authkey, authpubkey)) {
+
+	if (1 != key_login(pamh, flags, authslot, pin_regex))
+		goto err;
+
+	if (authkey == NULL && authcert) {
+		if (NULL == (authkey = PKCS11_find_key(authcert))) {
+			r = PAM_AUTHINFO_UNAVAIL;
+			goto err;
+		}
+	}
+	if (1 != key_verify(pamh, flags, authkey, authpubkey)) {
 		if (authslot->token->userPinLocked) {
 			r = PAM_MAXTRIES;
 		} else {
@@ -753,6 +762,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	PKCS11_CTX *ctx;
 	unsigned int nslots;
 	PKCS11_KEY *authkey;
+	PKCS11_CERT *authcert;
 	EVP_PKEY *authpubkey = NULL;
 	PKCS11_SLOT *slots, *authslot;
 	const char *user, *pin_regex;
@@ -771,7 +781,7 @@ PAM_EXTERN int pam_sm_chauthtok(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (1 != key_find(pamh, flags, user, ctx, slots, nslots,
-				&authslot, &authkey, &authpubkey)) {
+				&authslot, &authkey, &authpubkey, &authcert)) {
 		r = PAM_AUTHINFO_UNAVAIL;
 		goto err;
 	}
