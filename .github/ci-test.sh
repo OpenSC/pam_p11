@@ -52,11 +52,22 @@ for KEY in 2048 prime256v1 secp384r1 secp521r1; do
 	cp user.crt $HOME/.eid/authorized_certificates
 
 	echo "Using softhsm (key + public key)"
+	echo "................................"
 	rm -rf .tokens
 	mkdir .tokens
 	softhsm2-util --init-token --slot 0 --label "SC test" --so-pin="$SOPIN" --pin="$PIN"
 	pkcs11-tool --module="$P11LIB" --write-object user.key.der --type privkey --label "${KEY}" --login --pin=$PIN --id 01 2>/dev/null
 	pkcs11-tool --module="$P11LIB" --write-object user.pub.der --type pubkey --label "${KEY}" --login --pin=$PIN --id 01 >/dev/null 2>/dev/null
+	echo $PIN |src/test-login $P11LIB $(whoami)
+
+	echo "Using softhsm (key + certificate)"
+	echo "................................."
+	rm -rf .tokens
+	mkdir .tokens
+	softhsm2-util --init-token --slot 0 --label "SC test" --so-pin="$SOPIN" --pin="$PIN"
+	pkcs11-tool --module="$P11LIB" --write-object user.key.der --type privkey --label "${KEY}" --login --pin=$PIN --id 01  2>/dev/null
+	pkcs11-tool --module="$P11LIB" --write-object user.crt --type cert --label "${KEY}" --login --pin=$PIN --id 01  >/dev/null 2>/dev/null
+
 	echo $PIN |src/test-login $P11LIB $(whoami)
 
 done
