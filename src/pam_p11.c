@@ -523,6 +523,14 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 			break;
 		}
 		token_found = 1;
+		/* Update "slots" pointer: PKCS11 slots are implemented as array,
+		 * so starting to look at slot + 1 and decrementing nslots accordingly
+		 * will search the rest of slots. */
+		nslots -= (slot + 1 - slots);
+		slots = slot + 1;
+
+		if (slot->token->initialized == 0)
+			continue;
 
 		if (slot->token->loginRequired && slot->token->userPinLocked) {
 			pam_syslog(pamh, LOG_DEBUG, "%s: PIN locked",
@@ -580,20 +588,15 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 				count--;
 			}
 		}
-
-		/* Try the next possible slot: PKCS11 slots are implemented as array,
-		 * so starting to look at slot++ and decrementing nslots accordingly
-		 * will search the rest of slots. */
-		slot++;
-		nslots -= (slot - slots);
-		slots = slot;
-		pam_syslog(pamh, LOG_DEBUG, "No authorized key found");
+		pam_syslog(pamh, LOG_DEBUG, "No authorized key found on token %s",
+				slot->token->label);
 	}
 
 	if (0 == token_found) {
 		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("No token found"));
 	} else {
-		prompt(flags, pamh, PAM_ERROR_MSG , NULL, _("No authorized keys on token"));
+		prompt(flags, pamh, PAM_ERROR_MSG, NULL,
+				_("Could not find authorized keys on any of the tokens."));
 	}
 
 	return 0;
