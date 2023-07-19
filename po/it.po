@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pam-p11\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenSC/pam_p11/issues\n"
-"POT-Creation-Date: 2023-06-08 18:38+0200\n"
+"POT-Creation-Date: 2023-07-19 12:06+0200\n"
 "PO-Revision-Date: 2019-02-28 14:03+0000\n"
 "Last-Translator: Milo Casagrande <milo@milo.name>\n"
 "Language-Team: Italian <tp@lists.linux.it>\n"
@@ -97,14 +97,14 @@ msgstr "PIN non modificato; un tentativo rimasto"
 msgid "PIN not changed"
 msgstr "PIN non modificato"
 
-#: src/pam_p11.c:599
+#: src/pam_p11.c:596
 msgid "No token found"
 msgstr "Nessun token trovato"
 
-#: src/pam_p11.c:601
-msgid "No authorized keys on token"
-msgstr "Nessuna chiave autorizzata sul token"
+#: src/pam_p11.c:599
+msgid "Could not find authorized keys on any of the tokens."
+msgstr "Impossibile trovare chiavi autorizzate su nessuno dei token."
 
-#: src/pam_p11.c:663
+#: src/pam_p11.c:660
 msgid "Error verifying key"
 msgstr "Errore nel verificare la chiave"
