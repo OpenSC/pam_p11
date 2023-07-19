@@ -13,7 +13,7 @@ Pam_p11 is very simple, it has no config file, does not know about certificate c
 
 Pam_p11 was written by an international team and is licensed as Open Source software under the LGPL license.
 
-[![GitHub CI status](https://img.shields.io/github/workflow/status/OpenSC/pam_p11/Build/master?label=Linux%2FmacOS&logo=github)](https://github.com/OpenSC/pam_p11/actions/workflows/ci.yml?branch=master) [![Coverity Scan CI Status](https://img.shields.io/coverity/scan/15452.svg?label=Coverity%20Scan)](https://scan.coverity.com/projects/15452)
+[![GitHub CI Status](https://img.shields.io/github/actions/workflow/status/OpenSC/pam_p11/ci.yml?branch=master&label=Linux%2FmacOS&logo=github)](https://github.com/OpenSC/pam_p11/actions/workflows/ci.yml?branch=master) [![Coverity Scan CI Status](https://img.shields.io/coverity/scan/15452.svg?label=Coverity%20Scan)](https://scan.coverity.com/projects/15452) [![CodeQL CI Status](https://img.shields.io/github/actions/workflow/status/OpenSC/pam_p11/codeql.yml?branch=master&label=CodeQL&logo=github)](https://github.com/OpenSC/pam_p11/actions/workflows/codeql.yml?branch=master)
 
 ## Installing pam_p11
 
