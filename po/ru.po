@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: pam_p11 0.3.1\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenSC/pam_p11/issues\n"
-"POT-Creation-Date: 2023-06-08 18:38+0200\n"
+"POT-Creation-Date: 2023-07-19 12:06+0200\n"
 "Last-Translator: Mikhail Novosyolov <m.novosyolov@rosalinux.ru\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
@@ -90,14 +90,15 @@ msgstr "PIN  ;   "
 msgid "PIN not changed"
 msgstr "PIN  "
 
-#: src/pam_p11.c:599
+#: src/pam_p11.c:596
 msgid "No token found"
 msgstr "    "
 
-#: src/pam_p11.c:601
-msgid "No authorized keys on token"
+#: src/pam_p11.c:599
+#, fuzzy
+msgid "Could not find authorized keys on any of the tokens."
 msgstr "    "
 
-#: src/pam_p11.c:663
+#: src/pam_p11.c:660
 msgid "Error verifying key"
 msgstr "   "
