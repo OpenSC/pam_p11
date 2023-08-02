@@ -1,7 +1,7 @@
 AC_PREREQ(2.60)
 
 define([PACKAGE_VERSION_MAJOR], [0])
-define([PACKAGE_VERSION_MINOR], [4])
+define([PACKAGE_VERSION_MINOR], [5])
 define([PACKAGE_VERSION_FIX], [0])
 define([PACKAGE_SUFFIX], [])
 define([PRODUCT_BUGREPORT], [https://github.com/OpenSC/pam_p11/issues])
