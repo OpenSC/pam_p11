@@ -1,104 +1,104 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: pam_p11 0.3.1\n"
+"Project-Id-Version: pam_p11 0.5.0\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenSC/pam_p11/issues\n"
-"POT-Creation-Date: 2023-08-03 01:39+0200\n"
+"POT-Creation-Date: 2023-08-03 07:02+0200\n"
 "Last-Translator: Mikhail Novosyolov <m.novosyolov@rosalinux.ru\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: src/pam_p11.c:194
 msgid "Error loading PKCS#11 module"
-msgstr "    PKCS#11"
+msgstr "Ошибка при загрузке модуля PKCS#11"
 
 #: src/pam_p11.c:202 src/pam_p11.c:254
 msgid "Error initializing PKCS#11 module"
-msgstr "    PKCS#11"
+msgstr "Ошибка при инициализации модуля PKCS#11"
 
 #: src/pam_p11.c:322
 msgid " (last try)"
-msgstr " ( )"
+msgstr " (последняя попытка)"
 
 #: src/pam_p11.c:329
 #, c-format
 msgid "Login on PIN pad with %s%s"
-msgstr "     %s%s"
+msgstr "Войдите на панели ввода с %s%s"
 
 #: src/pam_p11.c:335
 #, c-format
 msgid "Login with %s%s: "
-msgstr "  %s%s: "
+msgstr "Вход с %s%s: "
 
 #: src/pam_p11.c:359
 msgid "Invalid PIN"
-msgstr " PIN"
+msgstr "Неправильный PIN"
 
 #: src/pam_p11.c:367
 msgid "PIN not verified; PIN locked"
-msgstr "PIN   ; PIN "
+msgstr "PIN не прошел проверку; PIN заблокирован"
 
 #: src/pam_p11.c:369
 msgid "PIN not verified; one try remaining"
-msgstr "PIN   ;   "
+msgstr "PIN не прошел проверку; осталась одна попытка"
 
 #: src/pam_p11.c:371
 msgid "PIN not verified"
-msgstr "PIN   "
+msgstr "PIN не прошел проверку"
 
 #: src/pam_p11.c:413
 #, c-format
 msgid "Change PIN with PUK on PIN pad for %s"
-msgstr " PIN  PUK-    %s"
+msgstr "Замените PIN вводом PUK-кода на панели ввода %s"
 
 #: src/pam_p11.c:417
 #, c-format
 msgid "Change PIN on PIN pad for %s"
-msgstr " PIN    %s"
+msgstr "Замените PIN на панели ввода %s"
 
 #: src/pam_p11.c:424
 #, c-format
 msgid "PUK for %s: "
-msgstr "PUK  %s: "
+msgstr "PUK для %s: "
 
 #: src/pam_p11.c:435
 msgid "Current PIN: "
-msgstr " PIN: "
+msgstr "Текущий PIN: "
 
 #: src/pam_p11.c:453
 msgid "Enter new PIN: "
-msgstr "  PIN: "
+msgstr "Введите новый PIN: "
 
 #: src/pam_p11.c:456
 msgid "Retype new PIN: "
-msgstr "    PIN: "
+msgstr "Еще раз введите новый PIN: "
 
 #: src/pam_p11.c:460
 msgid "PINs don't match"
-msgstr "PIN-  "
+msgstr "PIN-коды не совпадают"
 
 #: src/pam_p11.c:467
 msgid "PIN not changed; PIN locked"
-msgstr "PIN  ; PIN "
+msgstr "PIN не заменен; PIN заблокирован"
 
 #: src/pam_p11.c:469
 msgid "PIN not changed; one try remaining"
-msgstr "PIN  ;   "
+msgstr "PIN не заменен; осталась одна попытка"
 
 #: src/pam_p11.c:471
 msgid "PIN not changed"
-msgstr "PIN  "
+msgstr "PIN не заменен"
 
 #: src/pam_p11.c:596
 msgid "No token found"
-msgstr "    "
+msgstr "Не найден ни один токен"
 
 #: src/pam_p11.c:599
 #, fuzzy
 msgid "Could not find authorized keys on any of the tokens."
-msgstr "    "
+msgstr "Не удалось найти авторизованные ключи ни на одном из токенов."
 
 #: src/pam_p11.c:660
 msgid "Error verifying key"
-msgstr "   "
+msgstr "Ошибка при проверке ключа"
