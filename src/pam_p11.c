@@ -699,8 +699,10 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 		goto err;
 	}
 
-	if (1 != key_login(pamh, flags, authslot, pin_regex))
+	if (1 != key_login(pamh, flags, authslot, pin_regex)) {
+		r = PAM_AUTH_ERR;
 		goto err;
+	}
 
 	if (authkey == NULL && authcert) {
 		if (NULL == (authkey = PKCS11_find_key(authcert))) {
