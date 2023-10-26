@@ -700,7 +700,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t * pamh, int flags, int argc,
 	}
 
 	if (1 != key_login(pamh, flags, authslot, pin_regex)) {
-		r = PAM_AUTH_ERR;
+		r = PAM_CRED_INSUFFICIENT;
 		goto err;
 	}
 
