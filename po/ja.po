@@ -31,12 +31,12 @@ msgstr "(最後の試行)"
 #: src/pam_p11.c:329
 #, c-format
 msgid "Login on PIN pad with %s%s"
-msgstr "%s のPINパッドでログイン %s:"
+msgstr "%sのPINパッドでログイン%s"
 
 #: src/pam_p11.c:335
 #, c-format
 msgid "Login with %s%s: "
-msgstr "%s でログイン %s:"
+msgstr "%sでログイン%s:"
 
 #: src/pam_p11.c:359
 msgid "Invalid PIN"
@@ -44,7 +44,7 @@ msgstr "不正な暗証番号です。"
 
 #: src/pam_p11.c:367
 msgid "PIN not verified; PIN locked"
-msgstr "暗証番号は検証されていません。暗証番号がロックされています。"
+msgstr "暗証番号はロックされているため、検証されていません。"
 
 #: src/pam_p11.c:369
 msgid "PIN not verified; one try remaining"
@@ -57,17 +57,17 @@ msgstr "暗証番号は検証されていません。"
 #: src/pam_p11.c:413
 #, c-format
 msgid "Change PIN with PUK on PIN pad for %s"
-msgstr ""
+msgstr "%sのPINパッドにPUK(暗証番号ロック解除コード)を入力して暗証番号を変更してください。"
 
 #: src/pam_p11.c:417
 #, c-format
 msgid "Change PIN on PIN pad for %s"
-msgstr "%s のPINパッドで暗証番号を変更してください"
+msgstr "%sのPINパッドで暗証番号を変更してください。"
 
 #: src/pam_p11.c:424
 #, c-format
 msgid "PUK for %s: "
-msgstr "%s のPUK(PINロック解除コード)を入力: "
+msgstr "%s のPUK(暗証番号ロック解除コード)を入力: "
 
 #: src/pam_p11.c:435
 msgid "Current PIN: "
@@ -87,7 +87,7 @@ msgstr "暗証番号が一致しません。"
 
 #: src/pam_p11.c:467
 msgid "PIN not changed; PIN locked"
-msgstr "暗証番号は変更されていません。暗証番号がロックされています。"
+msgstr "暗証番号はロックされているため、変更されていません。"
 
 #: src/pam_p11.c:469
 msgid "PIN not changed; one try remaining"
@@ -103,7 +103,7 @@ msgstr "トークンが見つかりません。"
 
 #: src/pam_p11.c:599
 msgid "Could not find authorized keys on any of the tokens."
-msgstr ""
+msgstr "いずれのトークンでも認可された鍵が見つかりませんでした。"
 
 #: src/pam_p11.c:660
 msgid "Error verifying key"
