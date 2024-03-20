@@ -57,7 +57,9 @@ msgstr "暗証番号は検証されていません。"
 #: src/pam_p11.c:413
 #, c-format
 msgid "Change PIN with PUK on PIN pad for %s"
-msgstr "%sのPINパッドにPUK(暗証番号ロック解除コード)を入力して暗証番号を変更してください。"
+msgstr ""
+"%sのPINパッドにPUK(暗証番号ロック解除コード)を入力して暗証番号を変更してくだ"
+"さい。"
 
 #: src/pam_p11.c:417
 #, c-format
