@@ -1,7 +1,7 @@
 AC_PREREQ([2.71])
 
 define([PACKAGE_VERSION_MAJOR], [0])
-define([PACKAGE_VERSION_MINOR], [5])
+define([PACKAGE_VERSION_MINOR], [6])
 define([PACKAGE_VERSION_FIX], [0])
 define([PACKAGE_SUFFIX], [])
 define([PRODUCT_BUGREPORT], [https://github.com/OpenSC/pam_p11/issues])
@@ -104,16 +104,6 @@ fi
 saved_CFLAGS="${CFLAGS}"
 CFLAGS="${CFLAGS} ${OPENSSL_CFLAGS} ${LIBP11_CFLAGS} ${PAM_CFLAGS}"
 LIBS="$LIBS ${OPENSSL_LIBS} ${LIBP11_LIBS} ${PAM_LIBS}"
-
-dnl Checks for header files.
-m4_warn([obsolete],
-[The preprocessor macro `STDC_HEADERS' is obsolete.
-  Except in unusual embedded environments, you can safely include all
-  ISO C90 headers unconditionally.])dnl
-# Autoupdate added the next two lines to ensure that your configure
-# script's behavior did not change.  They are probably safe to remove.
-AC_CHECK_INCLUDES_DEFAULT
-AC_PROG_EGREP
 
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([ \

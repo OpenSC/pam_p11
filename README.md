@@ -20,9 +20,9 @@ Pam_p11 was written by an international team and is licensed as Open Source soft
 Installation is quite easy:
 
 ```
-wget https://github.com/OpenSC/pam_p11/releases/download/pam_p11-0.5.0/pam_p11-0.5.0.tar.gz
-tar xfvz pam_p11-0.5.0.tar.gz
-cd pam_p11-0.5.0
+wget https://github.com/OpenSC/pam_p11/releases/download/pam_p11-0.6.0/pam_p11-0.6.0.tar.gz
+tar xfvz pam_p11-0.6.0.tar.gz
+cd pam_p11-0.6.0
 ./configure --prefix=/usr --libdir=/lib/
 make
 make install
