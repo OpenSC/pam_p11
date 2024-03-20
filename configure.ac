@@ -1,4 +1,4 @@
-AC_PREREQ(2.60)
+AC_PREREQ([2.71])
 
 define([PACKAGE_VERSION_MAJOR], [0])
 define([PACKAGE_VERSION_MINOR], [5])
@@ -50,7 +50,7 @@ AM_GNU_GETTEXT([external])
 AM_GNU_GETTEXT_VERSION(0.18.3)
 
 dnl Add the languages which your application supports here.
-ALL_LINGUAS="de it ru"
+ALL_LINGUAS="de it ru ja"
 
 dnl Checks for programs.
 AC_PROG_CPP
@@ -106,7 +106,15 @@ CFLAGS="${CFLAGS} ${OPENSSL_CFLAGS} ${LIBP11_CFLAGS} ${PAM_CFLAGS}"
 LIBS="$LIBS ${OPENSSL_LIBS} ${LIBP11_LIBS} ${PAM_LIBS}"
 
 dnl Checks for header files.
-AC_HEADER_STDC
+m4_warn([obsolete],
+[The preprocessor macro `STDC_HEADERS' is obsolete.
+  Except in unusual embedded environments, you can safely include all
+  ISO C90 headers unconditionally.])dnl
+# Autoupdate added the next two lines to ensure that your configure
+# script's behavior did not change.  They are probably safe to remove.
+AC_CHECK_INCLUDES_DEFAULT
+AC_PROG_EGREP
+
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS([ \
 	string.h syslog.h fcntl.h unistd.h security/pam_ext.h security/pam_misc.h \
