@@ -14,17 +14,17 @@ on:
 
 jobs:
   macos:
-    runs-on: macos-11
+    runs-on: macos-15
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - run: .github/build.sh macos
 
   ubuntu:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - run: .github/build.sh ubuntu
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: pam_p11
         path:
@@ -32,29 +32,11 @@ jobs:
     - run: sudo apt install softhsm2 opensc
     - run: .github/ci-test.sh
 
-  ubuntu-22:
-    runs-on: ubuntu-22.04
+  ubuntu-libressl:
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
     - run: .github/build.sh ubuntu
     - run: sudo apt install softhsm2 opensc
-    - name: upgrading broken libp11 (using libp11 from lunar)
-      run: |
-       echo "deb http://us.archive.ubuntu.com/ubuntu/ lunar main"|sudo tee -a /etc/apt/sources.list
-       sudo apt update
-       sudo apt install libp11-3 libp11-dev
-    - run: .github/ci-test.sh
-
-  ubuntu-22-libressl:
-    runs-on: ubuntu-22.04
-    steps:
-    - uses: actions/checkout@v3
-    - run: .github/build.sh ubuntu
-    - run: sudo apt install softhsm2 opensc
-    - name: upgrading broken libp11 (using libp11 from lunar)
-      run: |
-       echo "deb http://us.archive.ubuntu.com/ubuntu/ lunar main"|sudo tee -a /etc/apt/sources.list
-       sudo apt update
-       sudo apt install libp11-3 libp11-dev
     - run: .github/setup-libressl.sh
     - run: .github/ci-test.sh
