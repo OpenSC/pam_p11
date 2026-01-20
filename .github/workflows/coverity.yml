@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - run: .github/build.sh coverity
-    - uses: vapier/coverity-scan-action@v0
+    - uses: vapier/coverity-scan-action@v1
       with:
         project: OpenSC%2Fpam_p11
         token: ${{ secrets.COVERITY_SCAN_TOKEN }}
