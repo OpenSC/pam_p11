@@ -1,5 +1,11 @@
 NEWS for Pam_p11 -- History of user visible changes
 
+New in 0.6.1; 2025-01-21; Frank Morgner
+* Add Georgian translation
+
+New in 0.6.0; 2024-03-22; Frank Morgner
+* Add Japanese translation
+
 New in 0.5.0; 2023-08-03; Frank Morgner
 * Add support for tokens that only contain a certificate (and no public key)
 * Fixed never-ending loop if the PIN is locked

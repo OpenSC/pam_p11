@@ -1,6 +1,6 @@
 # Welcome to pam_p11
 
-Pam_p11 is a plugable authentication module (pam) package for using crpytographic tokens such as smart cards and usb crypto tokens for authentication.
+Pam_p11 is a plugable authentication module (pam) package for using crpytographic tokens such as smart cards and usb crypto tokens for authentication on single user systems.
 
 Pam_p11 uses [libp11](https://github.com/OpenSC/libp11/) to access any PKCS#11 module. It should be compatible with any implementation, but it is primarely developed using [OpenSC](https://github.com/OpenSC/OpenSC/).
 
@@ -20,9 +20,9 @@ Pam_p11 was written by an international team and is licensed as Open Source soft
 Installation is quite easy:
 
 ```
-wget https://github.com/OpenSC/pam_p11/releases/download/pam_p11-0.6.0/pam_p11-0.6.0.tar.gz
-tar xfvz pam_p11-0.6.0.tar.gz
-cd pam_p11-0.6.0
+wget https://github.com/OpenSC/pam_p11/releases/download/pam_p11-0.6.1/pam_p11-0.6.1.tar.gz
+tar xfvz pam_p11-0.6.1.tar.gz
+cd pam_p11-0.6.1
 ./configure --prefix=/usr --libdir=/lib/
 make
 make install
