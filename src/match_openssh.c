@@ -196,8 +196,8 @@ static EVP_PKEY *ssh1_line_to_key(char *line)
 
 	/* second digitstring: the exponent */
 	/* skip all digits */
-	for (e = b; *e >= '0' && *e <= '0'; e++) ;
-
+	for (e = b; *e >= '0' && *e <= '9'; e++) ;
+	
 	/* must be a whitespace */
 	if (*e != ' ' && *e != '\t')
 		goto err;
@@ -212,7 +212,7 @@ static EVP_PKEY *ssh1_line_to_key(char *line)
 
 	/* third digitstring: the modulus */
 	/* skip all digits */
-	for (m = e; *m >= '0' && *m <= '0'; m++) ;
+	for (m = e; *m >= '0' && *m <= '9'; m++) ;
 
 	/* must be a whitespace */
 	if (*m != ' ' && *m != '\t')
@@ -227,7 +227,7 @@ static EVP_PKEY *ssh1_line_to_key(char *line)
 		m++;
 
 	/* look for a comment after the modulus */
-	for (c = m; *c >= '0' && *c <= '0'; c++) ;
+	for (c = m; *c >= '0' && *c <= '9'; c++) ;
 
 	/* could be a whitespace or end of line */
 	if (*c != ' ' && *c != '\t' && *c != '\n' && *c != '\r' && *c != 0)
@@ -278,11 +278,12 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	EVP_PKEY *key = NULL;
 	BIGNUM *rsa_e = NULL, *rsa_n = NULL;
 	unsigned char decoded[OPENSSH_LINE_MAX];
-	int len;
-
+	unsigned int len;
+	int decoded_len;
+	
 	char *b, *c;
-	int i;
-
+	unsigned int i;
+	
 	/* find the mime-blob */
 	b = line;
 
@@ -294,26 +295,33 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 		b++;
 
 	/* skip that whitespace */
-	b++;
+	if (*b == ' ')
+		b++;
 
 	/* find the end of the blob / comment */
-	for (c = b; *c && *c != ' ' && 'c' != '\t' && *c != '\r'
-	     && *c != '\n'; c++) ;
+	for (c = b; *c && *c != ' ' && *c != '\t' && *c != '\r'
+			&& *c != '\n'; c++) ;
 
 	*c = 0;
 
 	/* decode binary data */
-	if (sc_base64_decode(b, decoded, OPENSSH_LINE_MAX) < 0)
+	decoded_len = sc_base64_decode(b, decoded, OPENSSH_LINE_MAX);
+	if (decoded_len < 0)
 		goto err;
 
 	i = 0;
 
+	if (i + 4 > (unsigned int)decoded_len)
+		goto err;
 	/* get integer from blob */
-	len =
-	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
-	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	len = ((unsigned int)decoded[i] << 24) |
+		((unsigned int)decoded[i + 1] << 16) |
+		((unsigned int)decoded[i + 2] << 8) |
+		((unsigned int)decoded[i + 3]);
 	i += 4;
 
+	if (len != 7 || i + len > (unsigned int)decoded_len)
+		goto err;
 	/* now: key_from_blob */
 	if (strncmp((char *)&decoded[i], "ssh-rsa", 7) != 0)
 		goto err;
@@ -321,29 +329,31 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 	i += len;
 
 	/* to prevent access beyond 'decoded' array, index 'i' must be always checked */
-	if ( i + 4 > OPENSSH_LINE_MAX )
+	if (i + 4 > (unsigned int)decoded_len)
 		goto err;
 	/* get integer from blob */
-	len =
-	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
-	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	len = ((unsigned int)decoded[i] << 24) |
+		((unsigned int)decoded[i + 1] << 16) |
+		((unsigned int)decoded[i + 2] << 8) |
+		((unsigned int)decoded[i + 3]);
 	i += 4;
-
-	if ( i + len > OPENSSH_LINE_MAX )
+	
+	if (len > (unsigned int)decoded_len - i)
 		goto err;
 	/* get bignum */
 	rsa_e = BN_bin2bn(decoded + i, len, NULL);
 	i += len;
 
-	if ( i + 4 > OPENSSH_LINE_MAX )
+	if (i + 4 > (unsigned int)decoded_len)
 		goto err;
 	/* get integer from blob */
-	len =
-	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
-	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	len = ((unsigned int)decoded[i] << 24) |
+		((unsigned int)decoded[i + 1] << 16) |
+		((unsigned int)decoded[i + 2] << 8) |
+		((unsigned int)decoded[i + 3]);
 	i += 4;
-
-	if ( i + len > OPENSSH_LINE_MAX )
+	
+	if (len > (unsigned int)decoded_len - i)
 		goto err;
 	/* get bignum */
 	rsa_n = BN_bin2bn(decoded + i, len, NULL);
@@ -364,11 +374,12 @@ err:
 static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 {
 	unsigned char decoded[OPENSSH_LINE_MAX];
-	int len;
+	unsigned int len;
 	int flen;
-
+	int decoded_len;
+	
 	char *b, *c;
-	int i;
+	unsigned int i;
 	int nid;
 
 	/* check allowed key size */
@@ -392,55 +403,67 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 		b++;
 
 	/* skip that whitespace */
-	b++;
-
+	if (*b == ' ')
+		b++;
+	
 	/* find the end of the blob / comment */
-	for (c = b; *c && *c != ' ' && 'c' != '\t' && *c != '\r'
-	     && *c != '\n'; c++) ;
-
+	for (c = b; *c && *c != ' ' && *c != '\t' && *c != '\r'
+			&& *c != '\n'; c++) ;
+	
 	*c = 0;
 
 	/* decode binary data */
-	if (sc_base64_decode(b, decoded, OPENSSH_LINE_MAX) < 0)
+	decoded_len = sc_base64_decode(b, decoded, OPENSSH_LINE_MAX);
+	if (decoded_len < 0)
 		return NULL;
 
 	i = 0;
+	if (i + 4 > (unsigned int)decoded_len)
+		return NULL;
 	/* get integer from blob */
-	len =
-	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
-	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	len = ((unsigned int)decoded[i] << 24) |
+		((unsigned int)decoded[i + 1] << 16) |
+		((unsigned int)decoded[i + 2] << 8) |
+		((unsigned int)decoded[i + 3]);
 	i += 4;
 
 	/* always check 'len' to get safe 'i' as index into 'decoded' array */
-	if (len != 19)
+	if (len != 19 || i + len > (unsigned int)decoded_len)
 		return NULL;
 	/* check key type (must be same in decoded data and at line start) */
 	if (strncmp((char *)&decoded[i], line, 19) != 0)
 		return NULL;
 	i += len;
 
+	if (i + 4 > (unsigned int)decoded_len)
+		return NULL;
 	/* get integer from blob */
-	len =
-	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
-	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	len = ((unsigned int)decoded[i] << 24) |
+		((unsigned int)decoded[i + 1] << 16) |
+		((unsigned int)decoded[i + 2] << 8) |
+		((unsigned int)decoded[i + 3]);
 	i += 4;
 
 	/* check curve name - must match key type */
-	if(len != 8)
+	if (len != 8 || i + len > (unsigned int)decoded_len)
 		return NULL;
 	if (strncmp((char *)&decoded[i], line + 11, 8) != 0)
 		return NULL;
 	i += len;
 
+	if (i + 4 > (unsigned int)decoded_len)
+		return NULL;
 	/* get integer from blob */
-	len =
-	    (decoded[i] << 24) + (decoded[i + 1] << 16) +
-	    (decoded[i + 2] << 8) + (decoded[i + 3]);
+	len = ((unsigned int)decoded[i] << 24) |
+		((unsigned int)decoded[i + 1] << 16) |
+		((unsigned int)decoded[i + 2] << 8) |
+		((unsigned int)decoded[i + 3]);
 	i += 4;
 
 	/* read public key (uncompressed point) */
 	/* test if data length is corresponding to key size */
-	if (len != 1 + flen * 2)
+	if (len != (unsigned int)(1 + flen * 2) ||
+		i + len > (unsigned int)decoded_len)
 		return NULL;
 
 	/* check uncompressed indicator */
