@@ -306,7 +306,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 
 	/* decode binary data */
 	decoded_len = sc_base64_decode(b, decoded, OPENSSH_LINE_MAX);
-	if (decoded_len < 0)
+	if (decoded_len < 0 || decoded_len > OPENSSH_LINE_MAX)
 		goto err;
 
 	i = 0;
@@ -320,7 +320,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 		((unsigned int)decoded[i + 3]);
 	i += 4;
 
-	if (len != 7 || i + len > (unsigned int)decoded_len)
+	if (len > OPENSSH_LINE_MAX || len != 7 || i + len > (unsigned int)decoded_len)
 		goto err;
 	/* now: key_from_blob */
 	if (strncmp((char *)&decoded[i], "ssh-rsa", 7) != 0)
@@ -338,7 +338,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 		((unsigned int)decoded[i + 3]);
 	i += 4;
 	
-	if (len > (unsigned int)decoded_len - i)
+	if (len > OPENSSH_LINE_MAX || len > (unsigned int)decoded_len - i)
 		goto err;
 	/* get bignum */
 	rsa_e = BN_bin2bn(decoded + i, len, NULL);
@@ -353,7 +353,7 @@ static EVP_PKEY *ssh2_line_to_key(char *line)
 		((unsigned int)decoded[i + 3]);
 	i += 4;
 	
-	if (len > (unsigned int)decoded_len - i)
+	if (len > OPENSSH_LINE_MAX || len > (unsigned int)decoded_len - i)
 		goto err;
 	/* get bignum */
 	rsa_n = BN_bin2bn(decoded + i, len, NULL);
@@ -414,7 +414,7 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 
 	/* decode binary data */
 	decoded_len = sc_base64_decode(b, decoded, OPENSSH_LINE_MAX);
-	if (decoded_len < 0)
+	if (decoded_len < 0 || decoded_len > OPENSSH_LINE_MAX)
 		return NULL;
 
 	i = 0;
@@ -428,7 +428,7 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 	i += 4;
 
 	/* always check 'len' to get safe 'i' as index into 'decoded' array */
-	if (len != 19 || i + len > (unsigned int)decoded_len)
+	if (len > OPENSSH_LINE_MAX || len != 19 || i + len > (unsigned int)decoded_len)
 		return NULL;
 	/* check key type (must be same in decoded data and at line start) */
 	if (strncmp((char *)&decoded[i], line, 19) != 0)
@@ -445,7 +445,7 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 	i += 4;
 
 	/* check curve name - must match key type */
-	if (len != 8 || i + len > (unsigned int)decoded_len)
+	if (len > OPENSSH_LINE_MAX || len != 8 || i + len > (unsigned int)decoded_len)
 		return NULL;
 	if (strncmp((char *)&decoded[i], line + 11, 8) != 0)
 		return NULL;
@@ -462,7 +462,7 @@ static EVP_PKEY *ssh_nistp_line_to_key(char *line)
 
 	/* read public key (uncompressed point) */
 	/* test if data length is corresponding to key size */
-	if (len != (unsigned int)(1 + flen * 2) ||
+	if (len > OPENSSH_LINE_MAX || len != (unsigned int)(1 + flen * 2) ||
 		i + len > (unsigned int)decoded_len)
 		return NULL;
 
