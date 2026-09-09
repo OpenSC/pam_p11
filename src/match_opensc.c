@@ -26,8 +26,9 @@ extern int match_user_opensc(EVP_PKEY *authkey, const char *login)
 	if (!pw || !pw->pw_dir)
 		return -1;
 
-	snprintf(filename, PATH_MAX, "%s/.eid/authorized_certificates",
-		 pw->pw_dir);
+	if (snprintf(filename, PATH_MAX, "%s/.eid/authorized_certificates",
+				pw->pw_dir) >= PATH_MAX)
+		return -1;
 
 	in = BIO_new(BIO_s_file());
 	if (!in)
@@ -35,6 +36,7 @@ extern int match_user_opensc(EVP_PKEY *authkey, const char *login)
 
 	if (BIO_read_filename(in, filename) != 1) {
 		syslog(LOG_ERR, "BIO_read_filename from %s failed\n", filename);
+		BIO_free(in);
 		return -1;
 	}
 

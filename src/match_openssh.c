@@ -485,7 +485,8 @@ extern int match_user_openssh(EVP_PKEY *authkey, const char *login)
 	if (!pw || !pw->pw_dir)
 		return -1;
 
-	snprintf(filename, PATH_MAX, "%s/.ssh/authorized_keys", pw->pw_dir);
+	if (snprintf(filename, PATH_MAX, "%s/.ssh/authorized_keys", pw->pw_dir) >= PATH_MAX)
+		return -1;
 
 	file = fopen(filename, "r");
 	if (!file)

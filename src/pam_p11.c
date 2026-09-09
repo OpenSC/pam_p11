@@ -419,7 +419,7 @@ static int key_change_login(pam_handle_t *pamh, int flags, PKCS11_SLOT *slot, co
 		}
 	} else {
 		if (0 != slot->token->userPinLocked) {
-			if (PAM_SUCCESS == prompt(flags, pamh,
+			if (PAM_SUCCESS != prompt(flags, pamh,
 						PAM_PROMPT_ECHO_OFF, &old,
 						_("PUK for %s: "),
 						slot->token->label)) {
@@ -582,6 +582,7 @@ static int key_find(pam_handle_t *pamh, int flags, const char *user,
 							certs->label);
 					return 1;
 				}
+				EVP_PKEY_free(pubkey);
 
 				/* Try the next possible certificate */
 				certs++;
